@@ -19,6 +19,7 @@ import           System.Process
 import           XMonad
 
 -- xmonad contrib
+-- import           XMonad.Actions.SpawnOn
 import           XMonad.Hooks.ServerMode
 
 import           XMonad.Actions.Task

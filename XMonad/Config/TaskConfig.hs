@@ -6,6 +6,7 @@ module XMonad.Config.TaskConfig
    -- , allMyTaskNames
    -- , myTaskConfig
    , nonEmptyRecentsOnCurrentScreen
+   , gridselectWorkspaceShowAndGoto
    , nonEmptyTags
    , tasks
    ) where
@@ -157,24 +158,13 @@ taskKeyBindings conf = fromList $
                                     -- { autoComplete = Just 500000 } )
    , ((m,               xK_g   ), goToSelected gsConfig)
    , ((m .|. shiftMask, xK_g   ),
-         gets windowset
-            >>= windowSpacesNumTitles
-            >>= (\wnts -> gridselectWorkspaceShow
-                        gsConfigWorkspace
-                        (showWorkspace wnts)
-                        greedyView)
-            >> currentWorkspaceCommand taskCommands)
+         gridselectWorkspaceShowAndGoto taskCommands greedyView)
    , ((m .|. shiftMask .|. controlMask, xK_g   ),
-         gets windowset
-            >>= windowSpacesNumTitles
-            >>= (\wnts -> gridselectWorkspaceShow
-                            gsConfigWorkspace
-                            (showWorkspace wnts)
-                            (\wsp -> greedyView wsp . shift wsp))
-            >> currentWorkspaceCommand taskCommands)
+         gridselectWorkspaceShowAndGoto
+           taskCommands
+           (\wsp -> greedyView wsp . shift wsp))
    , ((m,               xK_b   ), bringSelected gsConfig)
    ]
-
    -- Standard keybindings:
    -- mod-[0..9], Switch to workspace N
    -- mod-shift-[0..9], Move client to workspace N
@@ -220,4 +210,16 @@ showWorkspace wnts w =
     ++ t
   where scr = unmarshallS . tag $ w
         (n,t) = fromJustDef (0,"") $ Data.List.lookup (tag w) wnts
+
+
+gridselectWorkspaceShowAndGoto :: TaskCommands
+                    -> (WorkspaceId -> WindowSet -> WindowSet) -> X ()
+gridselectWorkspaceShowAndGoto taskcommands f =
+         gets windowset
+            >>= windowSpacesNumTitles
+            >>= (\wnts -> gridselectWorkspaceShow
+                        gsConfigWorkspace
+                        (showWorkspace wnts)
+                        f)
+            >> currentWorkspaceCommand taskcommands
 

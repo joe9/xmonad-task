@@ -64,7 +64,7 @@ import           XMonad.Util.NamedWindows
 import           XMonad.Util.Run                  (spawnPipe)
 
 -- below not contributed to xmonad contrib yet
--- import           XMonad.Util.DTrace
+import           XMonad.Util.DTrace
 
 type Dir = FilePath
 type Name = String
@@ -165,12 +165,12 @@ isTaskOnScreen s = ((==) s) . tScreen
 -- -- | Switch to the given workspace.
 currentWorkspaceCommand :: TaskCommands -> X ()
 currentWorkspaceCommand tas = do
-  trace "currentWorkspaceCommand: started"
+  io $ dtrace "currentWorkspaceCommand: started"
   wsid <- gets (tag . workspace . current . windowset)
   if (isCurrentWorkspaceATask wsid)
     then currentTaskCommand tas
     -- else return ()
-    else io $ trace "currentWorkspaceCommand: isCurrentWorkspaceATask is false"
+    else io $ dtrace "currentWorkspaceCommand: isCurrentWorkspaceATask is false"
 
 isCurrentWorkspaceATask :: WorkspaceId -> Bool
 isCurrentWorkspaceATask =

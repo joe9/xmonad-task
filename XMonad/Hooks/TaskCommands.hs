@@ -13,6 +13,7 @@ import           Data.Maybe
 import           Data.Monoid
 import           Safe
 import           System.IO
+import           System.Process
 
 -- xmonad core
 import           XMonad
@@ -33,12 +34,18 @@ myTaskCommands :: TaskCommands
 myTaskCommands = [ ("terminal" , terminals 1)
                   , ("1terminal" , terminals 1)
                   , ("2terminal" , terminals 2)
-                  -- , ("Nothing"   , (\_ -> return ()))
+                  , ("3terminal" , terminals 3)
                   , ("Nothing"   , (\_ -> return ()))
                   ]
 
 terminals :: Int -> Task -> X()
-terminals n t = (spawnShellIn . tDir $ t) >*> n
+terminals n t =
+  (io . trace $ "mkdir --parents " ++ tDir t)
+     >> (io $ callProcess "/bin/mkdir" ["--parents", tDir t])
+     >> ((spawnShellIn . tDir $ t) >*> n)
+
+-- terminals :: Int -> Task -> X()
+-- terminals n t = (spawnShellIn . tDir $ t) >*> n
 
 -- $usage
 --

@@ -10,6 +10,7 @@ module XMonad.Config.XmobarConfig
 
 -- system imports
 import           Data.Default
+-- import           Safe
 
 -- xmonad core
 import           XMonad                           hiding (workspaces)
@@ -61,12 +62,18 @@ pp =
     , ppOrder             =
       \(wss:layoutString:titleString:_)
          -> [ addPosition . words $ wss
+            -- , removeMinimize layoutString
             , layoutString
             , titleString ]
     , ppTitle             = xmobarColor "green" "" . shorten 126
     -- ppSort              = return id
     , ppSort              = showOnlyCurrentScreenWorkspaces
     }
+--   where removeMinimize =
+--           ( unwords
+--             . tailNote "XmobarConfig.hs pp: formatting layoutstring"
+--             . words
+--           )
         -- where ssp = stripScreenPrefix
         -- below from XMonad.Layout.IndependentScreens
 

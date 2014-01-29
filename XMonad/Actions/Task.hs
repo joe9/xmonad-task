@@ -30,7 +30,6 @@ module XMonad.Actions.Task
    , addWorkspaceForTask
    , spawnShell
    , spawnShellIn
-   , myTerminal
    , windowSpacesNumTitles
    ) where
 
@@ -216,12 +215,12 @@ sendLayoutMessage (Nothing) = return ()
 sendLayoutMessage (Just l) = sendMessage . JumpToLayout $ l
 
 type NumberOfScreens = Int
-startupTaskWorkspaces :: NumberOfScreens -> [Task] -> [WorkspaceId]
-startupTaskWorkspaces i ts =
+startupTaskWorkspaces :: Int -> NumberOfScreens -> [Task] -> [WorkspaceId]
+startupTaskWorkspaces startId i ts =
   map (fromJustNote "startupTaskWorkspaces: should not be here")
     . Data.List.filter isJust
     . zipWith ($) fs
-    $ [1..]
+    $ [startId..]
     where fs = [taskToWorkspace (S s) t | t <- ts
                                         , s <- [0..(i-1)]
                                         , (S s) == tScreen t]
@@ -327,12 +326,9 @@ spawnShell =
   >>= spawnShellIn . tDir . workspaceIdToTask
 
 spawnShellIn :: Dir -> X ()
-spawnShellIn dir = spawnHere . unwords $ ["cd", dir, "&&", myTerminal]
+-- spawnShellIn dir = spawnHere . unwords $ ["cd", dir, "&&", myTerminal]
+-- spawnShellIn dir = undefined
+spawnShellIn dir =
+  asks (terminal . config)
+    >>= (\t -> spawnHere . unwords $ ["cd", dir, "&&", t])
 
--- below to run a command on startup
--- ZSHSTARTUPCMD="echo test" st -e tmux &
--- to add a session name or window name, use the below
--- tmux new-session -s "testing" -n "testing window"
-myTerminal :: String
-myTerminal = "/usr/bin/st -e /usr/bin/tmux"
--- myTerminal = "/usr/bin/urxvt"

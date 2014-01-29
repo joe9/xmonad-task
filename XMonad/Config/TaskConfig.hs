@@ -47,9 +47,8 @@ taskConfig =
                  barCreator
                  barDestroyer
     -- , workspaces  = startupTaskWorkspaces nScreens startupTasks
-    , workspaces  = startupTaskWorkspaces 2 startupTasks
+    , workspaces  = startupTaskWorkspaces 1 2 startupTasks
     , logHook     = tasksPP pp >>= (\p -> multiPP p p)
-    , terminal    = myTerminal
     , keys        = liftM2 union taskKeyBindings (keys def)
     }
 
@@ -72,8 +71,7 @@ myTaskdefinitions =
         . replicate 3
         . map (\s -> Task "terminal" (S s) "/home/j/" Nothing 0)
         $ [0..1])
-    ++   concatMap f   [ srcDir
-                      , "/home/j/etc/xmonad"
+    ++   concatMap f   [ "/home/j/etc/xmonad"
                       , "/home/j/etc/zsh"
                       , "/home/j/etc/X11"
                       , "/home/j/etc/emacs/emacs.d"
@@ -86,8 +84,6 @@ myTaskdefinitions =
                         ]
     ++   map ff0 [ "/home/j/" ]
   where
-      snsrDir   = "/home/j/dev/apps/pic/standalone/"
-      srcDir    = snsrDir ++ "src/all"
       f d = map (\s -> Task "terminal" (S s) d (Just "Full") 0) [0..1]
       ff1 d = Task "terminal" (S 1) d (Just "Full") 0
       ff0 d = Task "terminal" (S 0) d (Just "Full") 0

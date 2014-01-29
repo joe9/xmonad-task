@@ -5,7 +5,6 @@ module XMonad.Hooks.TaskCommands
    ( taskCommands
    , serverModeTaskEventHookCmd'
    , terminals
-   , terminalWithCommand
    ) where
 
 -- system imports
@@ -39,12 +38,6 @@ myTaskCommands = [ ("terminal" , terminals 1)
                   , ("3terminal" , terminals 3)
                   , ("Nothing"   , (\_ -> return ()))
                   ]
-
-terminalWithCommand :: String -> Task -> X()
-terminalWithCommand cmd t =
-  (io . trace $ "mkdir --parents " ++ tDir t)
-     >> (io $ callProcess "/bin/mkdir" ["--parents", tDir t])
-     >> (flip spawnShellWithCommandIn cmd . tDir $ t)
 
 terminals :: Int -> Task -> X()
 terminals n t =

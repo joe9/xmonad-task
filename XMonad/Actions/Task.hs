@@ -21,6 +21,7 @@ module XMonad.Actions.Task
    , xmessage
    , startupTaskWorkspaces
    , taskToWorkspace
+   , workspaceIdToTask
    , xmobarShowTask
    , sendLayoutMessage
    , xmobarShowTaskWithNumberOfWindows
@@ -30,8 +31,6 @@ module XMonad.Actions.Task
    , addWorkspaceForTask
    , spawnShell
    , spawnShellIn
-   , spawnShellWithCommand
-   , spawnShellWithCommandIn
    , windowSpacesNumTitles
    ) where
 
@@ -321,19 +320,6 @@ getMaximumTaskId =
     -- . map ((readMay :: String -> Maybe Task) . tag)
     . map (readMay . unmarshallW . tag)
     . workspaces
-
-spawnShellWithCommand :: String -> X ()
-spawnShellWithCommand cmd =
-  gets (tag . workspace . current . windowset)
-  >>= flip spawnShellWithCommandIn cmd . tDir . workspaceIdToTask
-
-spawnShellWithCommandIn :: Dir -> String -> X ()
-spawnShellWithCommandIn dir cmd =
-  asks (terminal . config)
-    >>= (\t -> spawnHere
-               . unwords
-               $ ["cd", dir, "&&", "ZSHSTARTUPCMD="++cmd, t]
-        )
 
 spawnShell :: X ()
 spawnShell =

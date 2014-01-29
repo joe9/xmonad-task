@@ -72,8 +72,7 @@ myTaskdefinitions =
         . replicate 3
         . map (\s -> Task "terminal" (S s) "/home/j/" Nothing 0)
         $ [0..1])
-    ++   concatMap f   [ "/home/j/etc/xmonad"
-                      , "/home/j/etc/zsh"
+    ++   concatMap f   [ "/home/j/etc/zsh"
                       , "/home/j/etc/X11"
                       , "/home/j/etc/emacs/emacs.d"
                       ]
@@ -83,7 +82,9 @@ myTaskdefinitions =
                         , "/home/j/"
                         , "/var/log"
                         ]
-    ++   map ff0 [ "/home/j/" ]
+    ++   map ff0 [ "/home/j/"
+                , "/home/j/etc/xmonad"
+                ]
   where
       f d = map (\s -> Task "terminal" (S s) d (Just "Full") 0) [0..1]
       ff1 d = Task "terminal" (S 1) d (Just "Full") 0

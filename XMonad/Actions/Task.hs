@@ -35,7 +35,6 @@ module XMonad.Actions.Task
    , startupTaskWorkspaces
    , taskToWorkspace
    , workspaceIdToTask
-   , sendLayoutMessage
    , tasksPP
    , addWorkspaceForTask
    , spawnShell
@@ -63,7 +62,6 @@ import           XMonad.Actions.OnScreen
 import           XMonad.Actions.SpawnOn
 import           XMonad.Hooks.DynamicLog
 import           XMonad.Layout.IndependentScreens
-import           XMonad.Layout.LayoutCombinators
 import           XMonad.Util.NamedWindows
 import           XMonad.Util.Run                  (spawnPipe)
 
@@ -129,7 +127,6 @@ type Name = String
 data Task = Task { tAction :: Name
                  , tScreen :: ScreenId
                  , tDir    :: Dir          -- starting directory
-                 , tLayout :: Maybe String -- starting layout
                  , tId     :: Int
                  -- , tLabel   :: Maybe String
                  }
@@ -246,20 +243,11 @@ doTaskAction tas t = do
      . fromJustDef nullTaskAction
      . M.lookup (tAction t)
      $ tas
-   when (isNothing . stack $ workSpace)
-     $ useLayout t
 
 -- allMyTaskNames :: [Name]
 -- allMyTaskNames =
 --    concatMap ((\x -> ["0_" ++ x, "1_" ++ x]) . tAction) tasks
 -- allMyTaskNames = map taskName myTasks
-
-useLayout :: Task -> X ()
-useLayout = sendLayoutMessage . tLayout
-
-sendLayoutMessage :: Maybe String -> X ()
-sendLayoutMessage (Nothing) = return ()
-sendLayoutMessage (Just l) = sendMessage . JumpToLayout $ l
 
 type NumberOfScreens = Int
 startupTaskWorkspaces :: Int -> NumberOfScreens -> [Task] -> [WorkspaceId]
@@ -354,7 +342,6 @@ addWorkspaceForTask _ (Just t) = do
   -- return ()
   addHiddenWorkspace (marshall (tScreen newtask) (show newtask))
   windows $ onScreen (greedyView (marshall (tScreen newtask) (show newtask))) (FocusTag (marshall (tScreen newtask) (show newtask))) (tScreen newtask)
-  useLayout newtask
 
 getMaximumTaskId :: WindowSet -> Int
 getMaximumTaskId =

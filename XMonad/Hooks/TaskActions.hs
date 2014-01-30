@@ -4,11 +4,12 @@ module XMonad.Hooks.TaskActions
    ( taskActions
    , serverModeTaskEventHookCmd'
    , terminals
+   , toLayout
    ) where
 
 -- system imports
 import           Data.List
-import qualified Data.Map                as M
+import qualified Data.Map                        as M
 import           Data.Maybe
 import           Data.Monoid
 import           Safe
@@ -21,18 +22,26 @@ import           XMonad
 -- xmonad contrib
 -- import           XMonad.Actions.SpawnOn
 import           XMonad.Hooks.ServerMode
+import           XMonad.Layout.LayoutCombinators
 
 import           XMonad.Actions.Task
 
 taskActions :: TaskActions
-taskActions = M.fromList
-                  [ ("terminal" , ta (terminals 1))
-                  , ("1terminal" , ta (terminals 1))
-                  , ("2terminal" , ta (terminals 2))
-                  , ("3terminal" , ta (terminals 3))
-                  , ("Nothing"   , ta (\_ -> return ()))
-                  ]
-              where ta f = TaskAction f (\_ _ -> "") (const "")
+taskActions =
+  M.fromList
+    [ ("terminal" , taf (terminals 1))
+    , ("1terminal" , taf (terminals 1))
+    , ("2terminal" , ta (terminals 2))
+    , ("3terminal" , ta (terminals 3))
+    , ("Nothing"   , ta (\_ -> return ()))
+    ]
+  where ta f  = nullTaskAction {taStartup = f}
+        taf f = nullTaskAction {taStartup = (\t -> f t >> l "Full")}
+      --tam f = nullTaskAction {taStartup = (\t -> f t >> l "Mosaic")}
+        l = toLayout
+
+toLayout :: String -> X ()
+toLayout = sendMessage . JumpToLayout
 
 terminals :: Int -> Task -> X()
 terminals n t =

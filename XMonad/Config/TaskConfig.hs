@@ -77,7 +77,7 @@ startupTasks = tasks
 tasks =
   (  concat
         . replicate 3
-        . map (\s -> Task "terminal" (S s) "/home/j/" Nothing 0)
+        . map (\s -> Task "terminal" (S s) "/home/j/" 0)
         $ [0..1])
     ++   concatMap f   [ "/home/j/etc/zsh"
                       , "/home/j/etc/X11"
@@ -93,9 +93,9 @@ tasks =
                 , "/home/j/etc/xmonad"
                 ]
   where
-      f d = map (\s -> Task "terminal" (S s) d (Just "Full") 0) [0..1]
-      ff1 d = Task "terminal" (S 1) d (Just "Full") 0
-      ff0 d = Task "terminal" (S 0) d (Just "Full") 0
+      f d = map (\s -> Task "terminal" (S s) d 0) [0..1]
+      ff1 d = Task "terminal" (S 1) d 0
+      ff0 d = Task "terminal" (S 0) d 0
 
 -- got this from
 -- http://m1.archiveorange.com/

@@ -21,11 +21,13 @@ module XMonad.Actions.Task
   -- * Usage
   -- $usage
      Task(..)
-   , TaskCommands
+   , TaskActions
+   , TaskAction(..)
    -- , goto
-   , doTaskCommand
-   , currentTaskCommand
-   , currentWorkspaceCommand
+   , doTaskAction
+   , currentTaskAction
+   , nullTaskAction
+   , currentWorkspaceAction
    , (>*>)
    , switchNthLastFocused
    , shiftNthLastFocused
@@ -45,6 +47,7 @@ module XMonad.Actions.Task
 import           Control.Monad
 
 import           Data.List
+import qualified Data.Map                         as M
 import           Data.Maybe
 import           Safe
 import           System.IO
@@ -112,29 +115,36 @@ import           XMonad.Util.DTrace
 -- >       f d = map (\s -> Task "terminal" (S s) d (Just "Full") 0) [0..1]
 -- >       ff1 d = Task "terminal" (S 1) d (Just "Full") 0
 -- >       ff0 d = Task "terminal" (S 0) d (Just "Full") 0
--- > taskCommands :: TaskCommands
--- > taskCommands = [ ("terminal" , terminals 1)
+-- > taskActions :: TaskActions
+-- > taskActions = [ ("terminal" , terminals 1)
 -- >                   , ("1terminal" , terminals 1)
 -- >                   , ("2terminal" , terminals 2)
 -- >                   , ("3terminal" , terminals 3)
 -- >                   , ("Nothing"   , \_ -> return ())
 -- >                   ]
---
 
 type Dir = FilePath
 type Name = String
 
-data Task = Task { tCommand :: Name
-                 , tScreen  :: ScreenId
-                 , tDir     :: Dir          -- starting directory
-                 , tLayout  :: Maybe String -- starting layout
-                 , tId      :: Int
+data Task = Task { tAction :: Name
+                 , tScreen :: ScreenId
+                 , tDir    :: Dir          -- starting directory
+                 , tLayout :: Maybe String -- starting layout
+                 , tId     :: Int
                  -- , tLabel   :: Maybe String
                  }
                  deriving (Eq, Read, Show)
 
--- type TaskCommands = Data.Map.Map Name (Task -> X ())
-type TaskCommands = [(String, Task -> X ())]
+type TaskActions = M.Map Name TaskAction
+
+data TaskAction =
+  TaskAction  { taStartup         :: Task -> X ()
+               , taXmobarShow     :: WorkspaceId -> WindowSpace -> String
+               , taGridSelectShow :: WindowSpace -> String
+               }
+
+nullTaskAction :: TaskAction
+nullTaskAction = TaskAction (\_ -> return ()) (\_ _ -> "") (const "")
 
 tasksPP :: ([(WorkspaceId,(Int,String))] -> PhysicalWorkspace -> String)
            -> PP -> X PP
@@ -200,41 +210,41 @@ isTaskOnScreen :: ScreenId -> Task -> Bool
 isTaskOnScreen s = (==) s . tScreen
 
 -- -- | Switch to the given workspace.
-currentWorkspaceCommand :: TaskCommands -> X ()
-currentWorkspaceCommand tas = do
-  io $ dtrace "currentWorkspaceCommand: started"
+currentWorkspaceAction :: TaskActions -> X ()
+currentWorkspaceAction tas = do
+  io $ dtrace "currentWorkspaceAction: started"
   wsid <- gets (tag . workspace . current . windowset)
   if isCurrentWorkspaceATask wsid
-    then currentTaskCommand tas
+    then currentTaskAction tas
     -- else return ()
-    else io $ dtrace "currentWorkspaceCommand: isCurrentWorkspaceATask is false"
+    else io $ dtrace "currentWorkspaceAction: isCurrentWorkspaceATask is false"
 
 isCurrentWorkspaceATask :: WorkspaceId -> Bool
 isCurrentWorkspaceATask =
   isJust . (readMay :: String -> Maybe Task) . unmarshallW
 
 -- goto :: Task -> X ()
--- goto t = switchTaskSpace t >> doTaskCommand t
+-- goto t = switchTaskSpace t >> doTaskAction t
 
 -- assumes that the task is current
-currentTaskCommand :: TaskCommands -> X ()
-currentTaskCommand tas =
+currentTaskAction :: TaskActions -> X ()
+currentTaskAction tas =
    gets(workspaceIdToTask
                      . tag
                      . workspace
                      . current
                      . windowset)
-   >>= doTaskCommand tas
+   >>= doTaskAction tas
 
 -- assumes that the task is current
-doTaskCommand :: TaskCommands -> Task -> X ()
-doTaskCommand tas t = do
+doTaskAction :: TaskActions -> Task -> X ()
+doTaskAction tas t = do
    workSpace <- gets(workspace . current . windowset)
    when (isNothing . stack $ workSpace)
-     -- . (\f -> liftIO ( f t))
      . (\f -> f t)
-     . fromJustDef (\_ -> return ())
-     . lookup (tCommand t)
+     . taStartup
+     . fromJustDef nullTaskAction
+     . M.lookup (tAction t)
      $ tas
    when (isNothing . stack $ workSpace)
      $ useLayout t

@@ -4,6 +4,7 @@ module XMonad.Config.TaskConfig
    ( taskConfig
    , startupTasks
    , gridselectWorkspaceShowAndGoto
+   , xmobarShowTaskWithNumberOfWindowsAndFocussedTitle
    -- , nonEmptyRecentsOnCurrentScreen
    -- , nonEmptyTags
    ) where
@@ -38,7 +39,7 @@ import           XMonad.Layout.WindowNavigation
 
 import           XMonad.Actions.Task
 import           XMonad.Config.XmobarConfig
-import           XMonad.Hooks.TaskCommands
+import           XMonad.Hooks.TaskActions
 
 taskConfig :: XConfig
                 (XMonad.Layout.LayoutModifier.ModifiedLayout
@@ -48,7 +49,7 @@ taskConfig =
   desktopConfig
     { handleEventHook       =
          serverModeEventHookF "XMONAD_PRINT" (io . putStrLn)
-            <+> serverModeTaskEventHookCmd' taskCommands defaultCommands
+            <+> serverModeTaskEventHookCmd' taskActions defaultCommands
             <+> dynStatusBarEventHook
                  barCreator
                  barDestroyer
@@ -165,10 +166,10 @@ taskKeyBindings conf = fromList $
                                     -- { autoComplete = Just 500000 } )
    , ((m,               xK_g   ), goToSelected gsConfig)
    , ((m .|. shiftMask, xK_g   ),
-         gridselectWorkspaceShowAndGoto taskCommands greedyView)
+         gridselectWorkspaceShowAndGoto taskActions greedyView)
    , ((m .|. shiftMask .|. controlMask, xK_g   ),
          gridselectWorkspaceShowAndGoto
-           taskCommands
+           taskActions
            (\wsp -> greedyView wsp . shift wsp))
    , ((m,               xK_b   ), bringSelected gsConfig)
    ]
@@ -218,16 +219,16 @@ showWorkspace wnts w =
         (n,t) = fromJustDef (0,"") $ Data.List.lookup (tag w) wnts
 
 
-gridselectWorkspaceShowAndGoto :: TaskCommands
+gridselectWorkspaceShowAndGoto :: TaskActions
                     -> (WorkspaceId -> WindowSet -> WindowSet) -> X ()
-gridselectWorkspaceShowAndGoto taskcommands f =
+gridselectWorkspaceShowAndGoto taskactions f =
          gets windowset
             >>= windowSpacesNumTitles
             >>= (\wnts -> gridselectWorkspaceShow
                         gsConfigWorkspace
                         (showWorkspace wnts)
                         f)
-            >> currentWorkspaceCommand taskcommands
+            >> currentWorkspaceAction taskactions
 
 
 xmobarShowTaskWithNumberOfWindowsAndFocussedTitle ::

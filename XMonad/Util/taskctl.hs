@@ -37,7 +37,7 @@ repl addr = do e <- isEOF
                             repl addr
 
 sendAll :: String -> [String] -> IO ()
-sendAll addr ss = foldr (\a b -> sendCommand' addr a >> b) (return ()) ss
+sendAll addr = foldr (\a b -> sendCommand' addr a >> b) (return ())
 
 sendCommand' :: String -> String -> IO ()
 sendCommand' addr s

@@ -84,7 +84,7 @@ addPosition (x:xs) =
     unwords
     . (:) x
     -- change the below [0..9] to a longer symbol stream
-    . zipWith (\a b -> (show a) ++ ":" ++ b)
+    . zipWith (\a b -> show a ++ ":" ++ b)
               [0 .. 9 :: Int]
     $ xs
     -- where f = xmobarColor "yellow" ""

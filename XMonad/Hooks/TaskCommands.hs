@@ -1,6 +1,5 @@
 
 {-# OPTIONS_GHC -Wall #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 module XMonad.Hooks.TaskCommands
    ( taskCommands
    , serverModeTaskEventHookCmd'
@@ -25,24 +24,17 @@ import           XMonad.Hooks.ServerMode
 import           XMonad.Actions.Task
 
 taskCommands :: TaskCommands
-taskCommands = myTaskCommands
-
-myTaskCommands :: TaskCommands
--- myTaskCommands = Data.Map.fromList
---                   [ ("Nothing"   , (\_ -> liftIO (putStrLn "nothing")
---                                           >> return ()))
---                   ]
-myTaskCommands = [ ("terminal" , terminals 1)
+taskCommands = [ ("terminal" , terminals 1)
                   , ("1terminal" , terminals 1)
                   , ("2terminal" , terminals 2)
                   , ("3terminal" , terminals 3)
-                  , ("Nothing"   , (\_ -> return ()))
+                  , ("Nothing"   , \_ -> return ())
                   ]
 
 terminals :: Int -> Task -> X()
 terminals n t =
   (io . trace $ "mkdir --parents " ++ tDir t)
-     >> (io $ callProcess "/bin/mkdir" ["--parents", tDir t])
+     >> io (callProcess "/bin/mkdir" ["--parents", tDir t])
      >> ((spawnShellIn . tDir $ t) >*> n)
 
 -- terminals :: Int -> Task -> X()
@@ -79,16 +71,15 @@ terminals n t =
 -- | Additionally takes an action to generate the list of commands
 serverModeTaskEventHookCmd' :: [(String,Task -> X ())]
                                -> X [(String,X ())] -> Event -> X All
-serverModeTaskEventHookCmd' taskcommands cmdAction ev =
+serverModeTaskEventHookCmd' taskcommands cmdAction =
   serverModeEventHookF "XMONAD_COMMAND"
                     (sequence_ . commandHelper taskcommands cmdAction)
-                    ev
 
 -- got the below code from XMonad.Hooks.ServerMode
 commandHelper :: [(String,Task -> X ())]
                  -> X [(String,X ())] -> String -> [X()]
 commandHelper taskcommands cmdAction cmdl
-  | isPrefixOf ("TaskCommand ") cmdl =
+  | isPrefixOf "TaskCommand " cmdl =
       [ addWorkspaceForTask cmdl
         . readMay
         . drop (length "TaskCommand ")

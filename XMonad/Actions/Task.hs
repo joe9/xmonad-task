@@ -1,33 +1,40 @@
 
 {-# OPTIONS_GHC -Wall #-}
-{-# LANGUAGE ScopedTypeVariables #-}
+-----------------------------------------------------------------------
+-- |
+-- Module      :  XMonad.Actions.Task
+-- Copyright   :  (c)
+-- License     :  BSD-style (see LICENSE)
+--
+-- Maintainer  :  Joe <joe9mail@gmail.com>
+-- Stability   :  unstable
+-- Portability :  unportable
+--
+-- Turns your workspaces into a more task oriented system.
+-----------------------------------------------------------------------
+
 module XMonad.Actions.Task
-   ( Task(..)
-   -- , goto
-   -- , tasks
-   -- , allMyTaskNames
-   -- , myTaskConfig
-   -- , nonEmptyRecentsOnCurrentScreen
-   -- , nonEmptyTags
+   (
+  -- * Overview
+  -- $overview
+
+  -- * Usage
+  -- $usage
+     Task(..)
    , TaskCommands
-   -- , taskCommands
+   -- , goto
    , doTaskCommand
    , currentTaskCommand
    , currentWorkspaceCommand
    , (>*>)
-   -- , terminals
    , switchNthLastFocused
    , shiftNthLastFocused
    , xmessage
    , startupTaskWorkspaces
    , taskToWorkspace
    , workspaceIdToTask
-   , xmobarShowTask
    , sendLayoutMessage
-   , xmobarShowTaskWithNumberOfWindows
    , tasksPP
-   , numberOfWindows
-   , showNumberOfWindows
    , addWorkspaceForTask
    , spawnShell
    , spawnShellIn
@@ -37,14 +44,9 @@ module XMonad.Actions.Task
 -- system imports
 import           Control.Monad
 
--- import           Data.Default
--- import           Data.List.Split
--- import qualified Data.Map
--- import           Data.Map                         hiding (map)
 import           Data.List
 import           Data.Maybe
 import           Safe
-import           System.FilePath
 import           System.IO
 
 -- xmonad core
@@ -60,12 +62,64 @@ import           XMonad.Hooks.DynamicLog
 import           XMonad.Layout.IndependentScreens
 import           XMonad.Layout.LayoutCombinators
 import           XMonad.Util.NamedWindows
--- import           XMonad.Actions.CycleWindows
--- import           XMonad.Layout.LayoutCombinators
 import           XMonad.Util.Run                  (spawnPipe)
 
 -- below not contributed to xmonad contrib yet
 import           XMonad.Util.DTrace
+
+-- $overview
+-- This module allows to organize your workspaces on a precise task
+-- basis.  So instead of having a workspace called `work' you can
+-- setup one workspace per task.  Here we call these workspaces,
+-- tasks. The great thing with tasks is that one can attach a
+-- directory, starting layout and ScreenId that makes sense to each
+-- particular task.  One can also attach an action which will be
+-- triggered when switching to a topic that does not have any windows
+-- in it.  So you can attach your mail client to the mail task, some
+-- terminals in the right directory to the xmonad task... This package
+-- also provides a nice way to display your tasks in an historical
+-- way using a custom `pprWindowSet' function. You can also easily
+-- switch to recent tasks using this history of last focused tasks.
+
+-- $usage
+-- Here is an example of configuration using TopicSpace:
+--
+-- > -- The list of all tasks/workspaces of your xmonad configuration.
+-- > -- The order is important, new tasks must be inserted
+-- > -- at the end of the list if you want hot-restarting
+-- > -- to work.
+-- > startupTasks, tasks :: [Task]
+-- > startupTasks = tasks
+-- > tasks =
+-- >   (  concat
+-- >         . replicate 3
+-- >         . map (\s -> Task "terminal" (S s) "/home/j/" Nothing 0)
+-- >         $ [0..1])
+-- >     ++   concatMap f   [ "/home/j/etc/zsh"
+-- >                       , "/home/j/etc/X11"
+-- >                       , "/home/j/etc/emacs/emacs.d"
+-- >                       ]
+-- >     ++   map ff1   [ "/home/j/Desktop/"
+-- >                         , "/home/j/etc/emacs/emacs.d"
+-- >                         , "/home/j/"
+-- >                         , "/home/j/"
+-- >                         , "/var/log"
+-- >                         ]
+-- >     ++   map ff0 [ "/home/j/"
+-- >                 , "/home/j/etc/xmonad"
+-- >                 ]
+-- >   where
+-- >       f d = map (\s -> Task "terminal" (S s) d (Just "Full") 0) [0..1]
+-- >       ff1 d = Task "terminal" (S 1) d (Just "Full") 0
+-- >       ff0 d = Task "terminal" (S 0) d (Just "Full") 0
+-- > taskCommands :: TaskCommands
+-- > taskCommands = [ ("terminal" , terminals 1)
+-- >                   , ("1terminal" , terminals 1)
+-- >                   , ("2terminal" , terminals 2)
+-- >                   , ("3terminal" , terminals 3)
+-- >                   , ("Nothing"   , \_ -> return ())
+-- >                   ]
+--
 
 type Dir = FilePath
 type Name = String
@@ -75,19 +129,22 @@ data Task = Task { tCommand :: Name
                  , tDir     :: Dir          -- starting directory
                  , tLayout  :: Maybe String -- starting layout
                  , tId      :: Int
+                 -- , tLabel   :: Maybe String
                  }
                  deriving (Eq, Read, Show)
 
 -- type TaskCommands = Data.Map.Map Name (Task -> X ())
 type TaskCommands = [(String, Task -> X ())]
 
-tasksPP :: PP -> X PP
-tasksPP pp = do
+tasksPP :: ([(WorkspaceId,(Int,String))] -> PhysicalWorkspace -> String)
+           -> PP -> X PP
+tasksPP f pp = do
   ws <- gets windowset
   -- wnts <- mapM windowNumTitles . workspaces $ ws
   wnts <- windowSpacesNumTitles ws
   -- let f = xmobarShowTaskWithNumberOfWindows ws
-  let g = xmobarShowTaskWithNumberOfWindowsAndFocussedTitle wnts
+  -- let g = xmobarShowTaskWithNumberOfWindowsAndFocussedTitle wnts
+  let g = f wnts
   -- logTitle >>= trace . fromJustDef ""
   return $
     pp { ppCurrent         = ppCurrent         pp . g -- f
@@ -97,36 +154,24 @@ tasksPP pp = do
        , ppUrgent          = ppUrgent          pp . g -- f
        }
 
-xmobarShowTaskWithNumberOfWindowsAndFocussedTitle ::
-  [(WorkspaceId,(Int,String))]
-        -> PhysicalWorkspace
-        -> String
-xmobarShowTaskWithNumberOfWindowsAndFocussedTitle wnts wsid =
-  xmobarColor "white" "" (xmobarShowTask wsid)
-   ++ "-"
-   ++ show n
-   ++ "-"
-   ++ (headDef "" . words) t
-   where (n,t) = fromJustDef (0,"") $ Data.List.lookup wsid wnts
+-- xmobarShowTaskWithNumberOfWindows :: WindowSet
+--                                      -> PhysicalWorkspace
+--                                      -> String
+-- xmobarShowTaskWithNumberOfWindows ws wsid =
+--   xmobarColor "white" "" (xmobarShowTask wsid)
+--    ++ "-"
+--    ++ (numberOfWindowsInWorkspace ws wsid)
 
-xmobarShowTaskWithNumberOfWindows :: WindowSet
-                                     -> PhysicalWorkspace
-                                     -> String
-xmobarShowTaskWithNumberOfWindows ws wsid =
-  xmobarColor "white" "" (xmobarShowTask wsid)
-   ++ "-"
-   ++ (numberOfWindowsInWorkspace ws wsid)
+-- numberOfWindowsInWorkspace :: WindowSet -> WorkspaceId -> String
+-- numberOfWindowsInWorkspace ws wsid =
+--   showNumberOfWindows . find ((==) wsid . tag) . workspaces $ ws
 
-numberOfWindowsInWorkspace :: WindowSet -> WorkspaceId -> String
-numberOfWindowsInWorkspace ws wsid =
-  showNumberOfWindows . find ((==) wsid . tag) . workspaces $ ws
+-- showNumberOfWindows :: Maybe WindowSpace -> String
+-- showNumberOfWindows = show . numberOfWindows
 
-showNumberOfWindows :: Maybe WindowSpace -> String
-showNumberOfWindows = show . numberOfWindows
-
-numberOfWindows :: Maybe WindowSpace -> Int
-numberOfWindows (Nothing) = 0
-numberOfWindows (Just w) = numOfWindows w
+-- numberOfWindows :: Maybe WindowSpace -> Int
+-- numberOfWindows (Nothing) = 0
+-- numberOfWindows (Just w) = numOfWindows w
 
 numOfWindows :: WindowSpace -> Int
 numOfWindows = length . integrate' . stack
@@ -138,15 +183,6 @@ windowSpaceNumTitle :: WindowSpace -> X (WorkspaceId,(Int,String))
 windowSpaceNumTitle ws = do
   wTitle <- maybe (return "") (fmap show . getName . focus) . stack $ ws
   return (tag ws,(numOfWindows ws, wTitle))
-
-xmobarShowTask :: PhysicalWorkspace -> String
-xmobarShowTask w =
-  showTask w . (readMay :: String -> Maybe Task) . unmarshallW $ w
-
-showTask :: VirtualWorkspace -> Maybe Task -> String
-showTask w (Nothing) = w
-showTask _ (Just t) =
-  takeBaseName . dropTrailingPathSeparator . tDir $ t
 
 workspaceIdToTask :: WorkspaceId -> Task
 workspaceIdToTask =
@@ -161,14 +197,14 @@ taskToWorkspaceId s t
   |  otherwise          = Nothing
 
 isTaskOnScreen :: ScreenId -> Task -> Bool
-isTaskOnScreen s = ((==) s) . tScreen
+isTaskOnScreen s = (==) s . tScreen
 
 -- -- | Switch to the given workspace.
 currentWorkspaceCommand :: TaskCommands -> X ()
 currentWorkspaceCommand tas = do
   io $ dtrace "currentWorkspaceCommand: started"
   wsid <- gets (tag . workspace . current . windowset)
-  if (isCurrentWorkspaceATask wsid)
+  if isCurrentWorkspaceATask wsid
     then currentTaskCommand tas
     -- else return ()
     else io $ dtrace "currentWorkspaceCommand: isCurrentWorkspaceATask is false"
@@ -224,7 +260,7 @@ startupTaskWorkspaces startId i ts =
     $ [startId..]
     where fs = [taskToWorkspace (S s) t | t <- ts
                                         , s <- [0..(i-1)]
-                                        , (S s) == tScreen t]
+                                        , S s == tScreen t]
 -- startupTaskWorkspaces i ts =
 --   map (fromJustNote "startupTaskWorkspaces: should not be here")
 --     . Data.List.filter isJust
@@ -244,7 +280,7 @@ currentScreen = screen . current
 
 isOnCurrentScreen :: ScreenId -> WorkspaceId
                              -> Bool
-isOnCurrentScreen (S i) = isPrefixOf ((show i) ++ "_")
+isOnCurrentScreen (S i) = isPrefixOf (show i ++ "_")
 
 workspacesOnCurrentScreen :: ScreenId -> [WindowSpace]
                            -> [WindowSpace]
@@ -280,12 +316,10 @@ onNthLastFocussed i f = do
 -- | Switch to the Nth last focused task or failback to the
 -- 'defaultTask'.
 switchNthLastFocused :: Int -> X ()
-switchNthLastFocused i = do
-  onNthLastFocussed i greedyView
+switchNthLastFocused i = onNthLastFocussed i greedyView
 
 shiftNthLastFocused :: Int -> X ()
-shiftNthLastFocused i = do
-  onNthLastFocussed i shift
+shiftNthLastFocused i = onNthLastFocussed i shift
 
 -- save :: String -> IO ()
 -- save = writeFile "/tmp/xmonad_debug.txt"
@@ -302,7 +336,7 @@ addWorkspaceForTask rawt Nothing =
   io $ hPutStrLn stderr ("addWorkspaceForTask: Could not read string to task: " ++ rawt)
 addWorkspaceForTask _ (Just t) = do
   ws <- gets windowset
-  let tid     = (getMaximumTaskId ws) + 1
+  let tid     = getMaximumTaskId ws + 1
       newtask = t {tId = tid}
   trace $ show tid
   trace $ show newtask

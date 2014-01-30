@@ -3,12 +3,9 @@
 module XMonad.Config.TaskConfig
    ( taskConfig
    , startupTasks
-   -- , allMyTaskNames
-   -- , myTaskConfig
-   , nonEmptyRecentsOnCurrentScreen
    , gridselectWorkspaceShowAndGoto
-   , nonEmptyTags
-   , tasks
+   -- , nonEmptyRecentsOnCurrentScreen
+   -- , nonEmptyTags
    ) where
 
 -- system imports
@@ -17,6 +14,7 @@ import           Data.List                        (lookup)
 import           Data.Map                         (Map, fromList,
                                                    union)
 import           Safe
+import           System.FilePath
 
 -- xmonad core
 import           XMonad
@@ -30,15 +28,22 @@ import           XMonad.Actions.CycleWindows
 import           XMonad.Actions.GridSelect
 import           XMonad.Config.Desktop
 import           XMonad.Hooks.DynamicBars
+import           XMonad.Hooks.DynamicLog
+import           XMonad.Hooks.ManageDocks
 import           XMonad.Hooks.ServerMode
 import qualified XMonad.Layout.BoringWindows      as B
 import           XMonad.Layout.IndependentScreens
+import           XMonad.Layout.LayoutModifier
 import           XMonad.Layout.WindowNavigation
 
 import           XMonad.Actions.Task
 import           XMonad.Config.XmobarConfig
 import           XMonad.Hooks.TaskCommands
 
+taskConfig :: XConfig
+                (XMonad.Layout.LayoutModifier.ModifiedLayout
+                   XMonad.Hooks.ManageDocks.AvoidStruts
+                   (Choose Tall (Choose (Mirror Tall) Full)))
 taskConfig =
   desktopConfig
     { handleEventHook       =
@@ -47,9 +52,15 @@ taskConfig =
             <+> dynStatusBarEventHook
                  barCreator
                  barDestroyer
-    -- , workspaces  = startupTaskWorkspaces nScreens startupTasks
+    -- 1 = startId
+    -- 2 = number of screens
     , workspaces  = startupTaskWorkspaces 1 2 startupTasks
-    , logHook     = tasksPP pp >>= (\p -> multiPP p p)
+    -- can use a custom function instead of
+    --   xmobarShowTaskWithNumberOfWindowsAndFocussedTitle
+    , logHook     =
+      tasksPP xmobarShowTaskWithNumberOfWindowsAndFocussedTitle pp
+    -- using multiple xmobars, one for each screen
+       >>= (\p -> multiPP p p)
     , keys        = liftM2 union taskKeyBindings (keys def)
     }
 
@@ -61,14 +72,9 @@ taskConfig =
 -- to work.
 -- define some custom tasks for use with the TaskSpace module.
 startupTasks, tasks :: [Task]
-startupTasks = myTaskdefinitions
-tasks = myTaskdefinitions
-
--- | Do not use underscores in Task Names. Underscore is used as a
--- delimiter by IndependentScreens and this module
-myTaskdefinitions :: [Task]
-myTaskdefinitions =
-    (  concat
+startupTasks = tasks
+tasks =
+  (  concat
         . replicate 3
         . map (\s -> Task "terminal" (S s) "/home/j/" Nothing 0)
         $ [0..1])
@@ -169,14 +175,13 @@ taskKeyBindings conf = fromList $
    -- Standard keybindings:
    -- mod-[0..9], Switch to workspace N
    -- mod-shift-[0..9], Move client to workspace N
-   ++ (zip (zip (repeat m) [xK_0..xK_9])
-        $ map switchNthLastFocused [0..])
-   ++ (zip (zip (repeat $ m .|. shiftMask) [xK_0..xK_9])
-        $ map shiftNthLastFocused [0..])
+   ++ zip (zip (repeat m) [xK_0..xK_9])
+        (map switchNthLastFocused [0..])
+   ++ zip (zip (repeat $ m .|. shiftMask) [xK_0..xK_9])
+         (map shiftNthLastFocused [0..])
    -- mod-control-[0..9] moves window to workspace
-   ++ (zip (zip (repeat $ m .|. controlMask) [xK_0..xK_9])
-        $ map (\w -> (shiftNthLastFocused w)
-                     >> (switchNthLastFocused w))
+   ++ zip (zip (repeat $ m .|. controlMask) [xK_0..xK_9])
+         (map (\w -> shiftNthLastFocused w >> switchNthLastFocused w)
               [0..9])
    where
       m = modMask conf
@@ -224,3 +229,24 @@ gridselectWorkspaceShowAndGoto taskcommands f =
                         f)
             >> currentWorkspaceCommand taskcommands
 
+
+xmobarShowTaskWithNumberOfWindowsAndFocussedTitle ::
+  [(WorkspaceId,(Int,String))]
+        -> PhysicalWorkspace
+        -> String
+xmobarShowTaskWithNumberOfWindowsAndFocussedTitle wnts wsid =
+  xmobarColor "white" "" (xmobarShowTask wsid)
+   ++ "-"
+   ++ show n
+   ++ "-"
+   ++ (headDef "" . words) t
+   where (n,t) = fromJustDef (0,"") $ Data.List.lookup wsid wnts
+
+xmobarShowTask :: PhysicalWorkspace -> String
+xmobarShowTask w =
+  showTask w . (readMay :: String -> Maybe Task) . unmarshallW $ w
+
+showTask :: VirtualWorkspace -> Maybe Task -> String
+showTask w (Nothing) = w
+showTask _ (Just t) =
+  takeBaseName . dropTrailingPathSeparator . tDir $ t

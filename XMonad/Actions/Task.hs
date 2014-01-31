@@ -39,7 +39,6 @@ module XMonad.Actions.Task
    , addWorkspaceForTask
    , spawnShell
    , spawnShellIn
-   , windowSpacesNumTitles
    ) where
 
 -- system imports
@@ -62,7 +61,6 @@ import           XMonad.Actions.OnScreen
 import           XMonad.Actions.SpawnOn
 import           XMonad.Hooks.DynamicLog
 import           XMonad.Layout.IndependentScreens
-import           XMonad.Util.NamedWindows
 import           XMonad.Util.Run                  (spawnPipe)
 
 -- below not contributed to xmonad contrib yet
@@ -128,68 +126,43 @@ data Task = Task { tAction :: Name
                  , tScreen :: ScreenId
                  , tDir    :: Dir          -- starting directory
                  , tId     :: Int
-                 -- , tLabel   :: Maybe String
                  }
                  deriving (Eq, Read, Show)
 
-type TaskActions = M.Map Name TaskAction
+type TaskActions a b = M.Map Name (TaskAction a b)
 
-data TaskAction =
+data TaskAction a b =
   TaskAction  { taStartup         :: Task -> X ()
-               , taXmobarShow     :: WorkspaceId -> WindowSpace -> String
-               , taGridSelectShow :: WindowSpace -> String
+               , taXmobarShow     :: a -> WorkspaceId -> String
+               , taGridSelectShow :: b -> WindowSpace -> String
                }
 
-nullTaskAction :: TaskAction
-nullTaskAction = TaskAction (\_ -> return ()) (\_ _ -> "") (const "")
+nullTaskAction :: TaskAction a b
+nullTaskAction = TaskAction (\_ -> return ()) (\_ w -> w) (\_ -> tag)
 
-tasksPP :: ([(WorkspaceId,(Int,String))] -> PhysicalWorkspace -> String)
-           -> PP -> X PP
-tasksPP f pp = do
-  ws <- gets windowset
-  -- wnts <- mapM windowNumTitles . workspaces $ ws
-  wnts <- windowSpacesNumTitles ws
-  -- let f = xmobarShowTaskWithNumberOfWindows ws
-  -- let g = xmobarShowTaskWithNumberOfWindowsAndFocussedTitle wnts
-  let g = f wnts
+tasksPP :: (WindowSet -> X (M.Map WorkspaceId a))
+            -> TaskActions a b
+            -> PP
+            -> X PP
+tasksPP f tas pp = do
+  wsInfo <- (gets windowset >>= f)
+  let g = (\wsid -> (\ff -> h ff (M.lookup wsid wsInfo) wsid)
+                    . taXmobarShow
+                    . fromJustDef nullTaskAction
+                    . flip M.lookup tas
+                    . tAction
+                    . workspaceIdToTask
+                    $ wsid )
+      h _  (Nothing) wsid = wsid
+      h ff (Just t) wsid  = ff t wsid
   -- logTitle >>= trace . fromJustDef ""
   return $
-    pp { ppCurrent         = ppCurrent         pp . g -- f
-       , ppVisible         = ppVisible         pp . g -- f
-       , ppHidden          = ppHidden          pp . g -- f
-       , ppHiddenNoWindows = ppHiddenNoWindows pp . g -- f
-       , ppUrgent          = ppUrgent          pp . g -- f
+    pp { ppCurrent         = ppCurrent         pp . g
+       , ppVisible         = ppVisible         pp . g
+       , ppHidden          = ppHidden          pp . g
+       , ppHiddenNoWindows = ppHiddenNoWindows pp . g
+       , ppUrgent          = ppUrgent          pp . g
        }
-
--- xmobarShowTaskWithNumberOfWindows :: WindowSet
---                                      -> PhysicalWorkspace
---                                      -> String
--- xmobarShowTaskWithNumberOfWindows ws wsid =
---   xmobarColor "white" "" (xmobarShowTask wsid)
---    ++ "-"
---    ++ (numberOfWindowsInWorkspace ws wsid)
-
--- numberOfWindowsInWorkspace :: WindowSet -> WorkspaceId -> String
--- numberOfWindowsInWorkspace ws wsid =
---   showNumberOfWindows . find ((==) wsid . tag) . workspaces $ ws
-
--- showNumberOfWindows :: Maybe WindowSpace -> String
--- showNumberOfWindows = show . numberOfWindows
-
--- numberOfWindows :: Maybe WindowSpace -> Int
--- numberOfWindows (Nothing) = 0
--- numberOfWindows (Just w) = numOfWindows w
-
-numOfWindows :: WindowSpace -> Int
-numOfWindows = length . integrate' . stack
-
-windowSpacesNumTitles :: WindowSet -> X [(WorkspaceId,(Int,String))]
-windowSpacesNumTitles = mapM windowSpaceNumTitle . workspaces
-
-windowSpaceNumTitle :: WindowSpace -> X (WorkspaceId,(Int,String))
-windowSpaceNumTitle ws = do
-  wTitle <- maybe (return "") (fmap show . getName . focus) . stack $ ws
-  return (tag ws,(numOfWindows ws, wTitle))
 
 workspaceIdToTask :: WorkspaceId -> Task
 workspaceIdToTask =
@@ -197,8 +170,6 @@ workspaceIdToTask =
    . unmarshallW
 
 taskToWorkspaceId :: ScreenId -> Task -> Maybe WorkspaceId
--- taskToWorkspaceId :: ScreenId -> Task -> WorkspaceId
--- taskToWorkspaceId s t = marshall s . show $ t
 taskToWorkspaceId s t
   |  isTaskOnScreen s t = Just . marshall s . show $ t
   |  otherwise          = Nothing
@@ -207,7 +178,7 @@ isTaskOnScreen :: ScreenId -> Task -> Bool
 isTaskOnScreen s = (==) s . tScreen
 
 -- -- | Switch to the given workspace.
-currentWorkspaceAction :: TaskActions -> X ()
+currentWorkspaceAction :: TaskActions a b -> X ()
 currentWorkspaceAction tas = do
   io $ dtrace "currentWorkspaceAction: started"
   wsid <- gets (tag . workspace . current . windowset)
@@ -224,7 +195,7 @@ isCurrentWorkspaceATask =
 -- goto t = switchTaskSpace t >> doTaskAction t
 
 -- assumes that the task is current
-currentTaskAction :: TaskActions -> X ()
+currentTaskAction :: TaskActions a b -> X ()
 currentTaskAction tas =
    gets(workspaceIdToTask
                      . tag
@@ -234,7 +205,7 @@ currentTaskAction tas =
    >>= doTaskAction tas
 
 -- assumes that the task is current
-doTaskAction :: TaskActions -> Task -> X ()
+doTaskAction :: TaskActions a b -> Task -> X ()
 doTaskAction tas t = do
    workSpace <- gets(workspace . current . windowset)
    when (isNothing . stack $ workSpace)
@@ -243,11 +214,6 @@ doTaskAction tas t = do
      . fromJustDef nullTaskAction
      . M.lookup (tAction t)
      $ tas
-
--- allMyTaskNames :: [Name]
--- allMyTaskNames =
---    concatMap ((\x -> ["0_" ++ x, "1_" ++ x]) . tAction) tasks
--- allMyTaskNames = map taskName myTasks
 
 type NumberOfScreens = Int
 startupTaskWorkspaces :: Int -> NumberOfScreens -> [Task] -> [WorkspaceId]
@@ -348,7 +314,6 @@ getMaximumTaskId =
   maximum
     . map (tId . fromJustNote "getMaximumTaskId: shuld not happen")
     . Data.List.filter isJust
-    -- . map ((readMay :: String -> Maybe Task) . tag)
     . map (readMay . unmarshallW . tag)
     . workspaces
 
@@ -358,8 +323,6 @@ spawnShell =
   >>= spawnShellIn . tDir . workspaceIdToTask
 
 spawnShellIn :: Dir -> X ()
--- spawnShellIn dir = spawnHere . unwords $ ["cd", dir, "&&", myTerminal]
--- spawnShellIn dir = undefined
 spawnShellIn dir =
   asks (terminal . config)
     >>= (\t -> spawnHere . unwords $ ["cd", dir, "&&", t])

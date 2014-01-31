@@ -5,8 +5,7 @@ module XMonad.Config.TaskConfig
    , startupTasks
    , gridselectWorkspaceShowAndGoto
    , xmobarShowTaskWithNumberOfWindowsAndFocussedTitle
-   -- , nonEmptyRecentsOnCurrentScreen
-   -- , nonEmptyTags
+   , windowSpacesNumTitles
    ) where
 
 -- system imports
@@ -14,11 +13,12 @@ import           Control.Monad
 import           Data.List                        (lookup)
 import           Data.Map                         (Map, fromList,
                                                    union)
+import qualified Data.Map                         as M
 import           Safe
 import           System.FilePath
 
 -- xmonad core
-import           XMonad
+import           XMonad                           hiding (focus)
 import           XMonad.StackSet                  hiding (workspaces)
 import qualified XMonad.StackSet                  as S
 
@@ -36,10 +36,12 @@ import qualified XMonad.Layout.BoringWindows      as B
 import           XMonad.Layout.IndependentScreens
 import           XMonad.Layout.LayoutModifier
 import           XMonad.Layout.WindowNavigation
+import           XMonad.Util.NamedWindows
 
 import           XMonad.Actions.Task
+import           XMonad.Config.TaskActionConfig
 import           XMonad.Config.XmobarConfig
-import           XMonad.Hooks.TaskActions
+import           XMonad.Hooks.TaskCommands
 
 taskConfig :: XConfig
                 (XMonad.Layout.LayoutModifier.ModifiedLayout
@@ -59,9 +61,8 @@ taskConfig =
     -- can use a custom function instead of
     --   xmobarShowTaskWithNumberOfWindowsAndFocussedTitle
     , logHook     =
-      tasksPP xmobarShowTaskWithNumberOfWindowsAndFocussedTitle pp
-    -- using multiple xmobars, one for each screen
-       >>= (\p -> multiPP p p)
+      tasksPP windowSpacesNumTitles taskActions pp
+        >>= (\p -> multiPP p p)
     , keys        = liftM2 union taskKeyBindings (keys def)
     }
 
@@ -166,11 +167,9 @@ taskKeyBindings conf = fromList $
                                     -- { autoComplete = Just 500000 } )
    , ((m,               xK_g   ), goToSelected gsConfig)
    , ((m .|. shiftMask, xK_g   ),
-         gridselectWorkspaceShowAndGoto taskActions greedyView)
+         g greedyView)
    , ((m .|. shiftMask .|. controlMask, xK_g   ),
-         gridselectWorkspaceShowAndGoto
-           taskActions
-           (\wsp -> greedyView wsp . shift wsp))
+         g (\wsp -> greedyView wsp . shift wsp))
    , ((m,               xK_b   ), bringSelected gsConfig)
    ]
    -- Standard keybindings:
@@ -189,6 +188,9 @@ taskKeyBindings conf = fromList $
       withScreen myscreen f = screenWorkspace myscreen
                               >>= flip whenJust (windows . f)
       viewShift  i   = view i . shift i
+      g = gridselectWorkspaceShowAndGoto
+            windowSpacesNumTitles
+            taskActions
 
 gsfont :: String
 gsfont =
@@ -206,30 +208,48 @@ gsConfig   = def { gs_cellwidth = 400 -- 800
                         , gs_font      = gsfont
                         }
 
-showWorkspace :: [(WorkspaceId,(Int,String))] -> WindowSpace -> String
-showWorkspace wnts w =
-  -- (showNumberOfWindows . Just $ w)
-  show n
-    ++ " "
-    ++ (marshall scr . xmobarShowTask . tag $ w)
-    ++ " "
-    -- ++ (headDef "" . words) t
-    ++ t
-  where scr = unmarshallS . tag $ w
-        (n,t) = fromJustDef (0,"") $ Data.List.lookup (tag w) wnts
-
-
-gridselectWorkspaceShowAndGoto :: TaskActions
-                    -> (WorkspaceId -> WindowSet -> WindowSet) -> X ()
-gridselectWorkspaceShowAndGoto taskactions f =
-         gets windowset
-            >>= windowSpacesNumTitles
-            >>= (\wnts -> gridselectWorkspaceShow
+gridselectWorkspaceShowAndGoto ::
+  (WindowSet -> X (M.Map WorkspaceId b))
+    -> TaskActions a b
+    -> (WorkspaceId -> WindowSet -> WindowSet)
+    -> X ()
+gridselectWorkspaceShowAndGoto f taskactions h =
+    gets windowset
+       >>= f
+       >>= (\wsInfo -> gridselectWorkspaceShow
                         gsConfigWorkspace
-                        (showWorkspace wnts)
-                        f)
-            >> currentWorkspaceAction taskactions
+                        (gridselectShowWindowSpace taskactions wsInfo)
+                        h)
+       >> currentWorkspaceAction taskactions
 
+gridselectShowWindowSpace :: TaskActions a b
+                                -> M.Map WorkspaceId b
+                                -> WindowSpace
+                                -> String
+gridselectShowWindowSpace tas bs ws =
+  (\f -> j f (M.lookup (tag ws) bs) ws)
+                . taGridSelectShow
+                . fromJustDef nullTaskAction
+                . flip M.lookup tas
+                . tAction
+                . workspaceIdToTask
+                . tag
+                $ ws
+  where j _  (Nothing) = tag
+        j f (Just b)   = f b
+
+windowSpacesNumTitles :: WindowSet -> X (M.Map WorkspaceId (Int,String))
+windowSpacesNumTitles s =
+  (mapM windowSpaceNumTitle . S.workspaces $ s)
+     >>= (return . M.fromList)
+
+windowSpaceNumTitle :: WindowSpace -> X (WorkspaceId,(Int,String))
+windowSpaceNumTitle ws = do
+  wTitle <- maybe (return "") (fmap show . getName . focus) . stack $ ws
+  return (tag ws,(numOfWindows ws, wTitle))
+
+numOfWindows :: WindowSpace -> Int
+numOfWindows = length . integrate' . stack
 
 xmobarShowTaskWithNumberOfWindowsAndFocussedTitle ::
   [(WorkspaceId,(Int,String))]

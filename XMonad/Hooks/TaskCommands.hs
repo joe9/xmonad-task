@@ -1,9 +1,7 @@
 
 {-# OPTIONS_GHC -Wall #-}
 module XMonad.Hooks.TaskCommands
-   ( taskCommands
-   , serverModeTaskEventHookCmd'
-   , terminals
+   ( serverModeTaskEventHookCmd'
    ) where
 
 -- system imports
@@ -12,40 +10,21 @@ import           Data.Maybe
 import           Data.Monoid
 import           Safe
 import           System.IO
-import           System.Process
 
 -- xmonad core
 import           XMonad
 
 -- xmonad contrib
--- import           XMonad.Actions.SpawnOn
 import           XMonad.Hooks.ServerMode
 
 import           XMonad.Actions.Task
-
-taskCommands :: TaskCommands
-taskCommands = [ ("terminal" , terminals 1)
-                  , ("1terminal" , terminals 1)
-                  , ("2terminal" , terminals 2)
-                  , ("3terminal" , terminals 3)
-                  , ("Nothing"   , \_ -> return ())
-                  ]
-
-terminals :: Int -> Task -> X()
-terminals n t =
-  (io . trace $ "mkdir --parents " ++ tDir t)
-     >> io (callProcess "/bin/mkdir" ["--parents", tDir t])
-     >> ((spawnShellIn . tDir $ t) >*> n)
-
--- terminals :: Int -> Task -> X()
--- terminals n t = (spawnShellIn . tDir $ t) >*> n
 
 -- $usage
 --
 -- You can use this module with the following in your @~\/.xmonad\/xmonad.hs@:
 --
 -- >    import XMonad.Hooks.ServerMode
--- >    import XMonad.Actions.BluetileCommands
+-- >    import XMonad.Actions.BluetileActions
 --
 -- Then edit your @handleEventHook@:
 --
@@ -69,22 +48,21 @@ terminals n t =
 --                 to create a task
 
 -- | Additionally takes an action to generate the list of commands
-serverModeTaskEventHookCmd' :: [(String,Task -> X ())]
+serverModeTaskEventHookCmd' :: TaskActions a b
                                -> X [(String,X ())] -> Event -> X All
 serverModeTaskEventHookCmd' taskcommands cmdAction =
   serverModeEventHookF "XMONAD_COMMAND"
                     (sequence_ . commandHelper taskcommands cmdAction)
 
 -- got the below code from XMonad.Hooks.ServerMode
-commandHelper :: [(String,Task -> X ())]
-                 -> X [(String,X ())] -> String -> [X()]
+commandHelper :: TaskActions a b -> X [(String,X ())] -> String -> [X()]
 commandHelper taskcommands cmdAction cmdl
-  | isPrefixOf "TaskCommand " cmdl =
+  | "TaskAction " `isPrefixOf` cmdl =
       [ addWorkspaceForTask cmdl
         . readMay
-        . drop (length "TaskCommand ")
+        . drop (length "TaskAction ")
         $ cmdl
-      , currentWorkspaceCommand taskcommands
+      , currentWorkspaceAction taskcommands
       ]
   | otherwise =
         map helper . words $ cmdl

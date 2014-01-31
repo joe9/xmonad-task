@@ -145,7 +145,7 @@ tasksPP :: Show a => (WindowSet -> X (M.Map WorkspaceId a))
                     -> PP
                     -> X PP
 tasksPP f tas pp = do
-  wsInfo <- (gets windowset >>= f)
+  wsInfo <- gets windowset >>= f
   let g = tasksPP' tas wsInfo
   -- io $ dtrace wsInfo
   return $

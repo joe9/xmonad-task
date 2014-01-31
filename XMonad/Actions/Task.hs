@@ -92,7 +92,7 @@ import           XMonad.Util.DTrace
 -- > tasks =
 -- >   (  concat
 -- >         . replicate 3
--- >         . map (\s -> Task "terminal" (S s) "/home/j/" Nothing 0)
+-- >         . map (\s -> Task "terminal" (S s) "/home/j/" 0)
 -- >         $ [0..1])
 -- >     ++   concatMap f   [ "/home/j/etc/zsh"
 -- >                       , "/home/j/etc/X11"
@@ -108,16 +108,30 @@ import           XMonad.Util.DTrace
 -- >                 , "/home/j/etc/xmonad"
 -- >                 ]
 -- >   where
--- >       f d = map (\s -> Task "terminal" (S s) d (Just "Full") 0) [0..1]
--- >       ff1 d = Task "terminal" (S 1) d (Just "Full") 0
--- >       ff0 d = Task "terminal" (S 0) d (Just "Full") 0
--- > taskActions :: TaskActions
--- > taskActions = [ ("terminal" , terminals 1)
--- >                   , ("1terminal" , terminals 1)
--- >                   , ("2terminal" , terminals 2)
--- >                   , ("3terminal" , terminals 3)
--- >                   , ("Nothing"   , \_ -> return ())
--- >                   ]
+-- >       f d = map (\s -> Task "terminal" (S s) d 0) [0..1]
+-- >       ff1 d = Task "terminal" (S 1) d 0
+-- >       ff0 d = Task "terminal" (S 0) d 0
+-- >
+-- > taskActions :: TaskActions (Int,String) (Int,String)
+-- > taskActions =
+-- >   M.fromList
+-- >     [ ("terminal"  , taf (terminals 1))
+-- >     , ("1terminal" , taf (terminals 1))
+-- >     , ("2terminal" , ta (terminals 2))
+-- >     , ("3terminal" , ta (terminals 3))
+-- >     , ("None"      , ta (\_ -> return ()))
+-- >     ]
+-- >   where ta f  = nullTaskAction
+-- >                  { taStartup    = f
+-- >                  , taXmobarShow = xmobarShowTaskDirNumTitle
+-- >                  , taGridSelectShow = gridSelectShowWorkspace
+-- >                  }
+-- >         taf f = nullTaskAction
+-- >                  { taStartup = \t -> f t >> l "Full"
+-- >                  , taXmobarShow = xmobarShowTaskDirNumTitle
+-- >                  , taGridSelectShow = gridSelectShowWorkspace
+-- >                  }
+-- >         l = toLayout
 
 type Dir = FilePath
 type Name = String

@@ -42,13 +42,16 @@ module XMonad.Actions.Task
    ) where
 
 -- system imports
-import           Control.Monad
+import           Control.Monad                    (replicateM_, when)
 
-import           Data.List
-import qualified Data.Map                         as M
-import           Data.Maybe
-import           Safe
-import           System.IO
+import           Data.List                        (filter, isPrefixOf)
+import qualified Data.Map                         as M (Map, lookup)
+import           Data.Maybe                       (isJust, isNothing)
+import           Safe                             (atDef, fromJustDef,
+                                                   fromJustNote,
+                                                   readMay, readNote)
+import           System.IO                        (hClose, hPutStr,
+                                                   hPutStrLn, stderr)
 
 -- xmonad core
 import           XMonad                           hiding (focus,
@@ -56,15 +59,17 @@ import           XMonad                           hiding (focus,
 import           XMonad.StackSet
 
 -- xmonad contrib
-import           XMonad.Actions.DynamicWorkspaces
-import           XMonad.Actions.OnScreen
-import           XMonad.Actions.SpawnOn
-import           XMonad.Hooks.DynamicLog
-import           XMonad.Layout.IndependentScreens
+import           XMonad.Actions.DynamicWorkspaces (addHiddenWorkspace)
+import           XMonad.Actions.OnScreen          (Focus (FocusTag),
+                                                   onScreen)
+import           XMonad.Actions.SpawnOn           (spawnHere)
+import           XMonad.Hooks.DynamicLog          (PP (ppCurrent, ppHidden, ppHiddenNoWindows, ppUrgent, ppVisible))
+import           XMonad.Layout.IndependentScreens (marshall,
+                                                   unmarshallW)
 import           XMonad.Util.Run                  (spawnPipe)
 
 -- below not contributed to xmonad contrib yet
-import           XMonad.Util.DTrace
+import           XMonad.Util.DTrace               (dtrace)
 
 -- $overview
 -- This module allows to organize your workspaces on a precise task
@@ -243,12 +248,6 @@ startupTaskWorkspaces startId i ts =
     where fs = [taskToWorkspace (S s) t | t <- ts
                                         , s <- [0..(i-1)]
                                         , S s == tScreen t]
--- startupTaskWorkspaces i ts =
---   map (fromJustNote "startupTaskWorkspaces: should not be here")
---     . Data.List.filter isJust
---     . zipWith ($) [taskToWorkspace (S s) t | t <- ts, s <- [0..(i-1)]]
---     $ [0..]
-
 taskToWorkspace :: ScreenId -> Task -> Int -> Maybe WorkspaceId
 taskToWorkspace s t i = taskToWorkspaceId s (t {tId = i})
 

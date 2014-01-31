@@ -7,11 +7,11 @@ module XMonad.Util.DTrace
    ) where
 
 -- system imports
-import           Data.Time
-import           Text.Groom
+import           Data.Time  (getCurrentTime)
+import           Text.Groom (groom)
 
 -- xmonad core
-import           XMonad
+import           XMonad     (trace)
 
 dtrace :: Show a => a -> IO ()
 dtrace s = getCurrentTime

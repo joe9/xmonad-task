@@ -9,39 +9,50 @@ module XMonad.Config.TaskConfig
    ) where
 
 -- system imports
-import           Control.Monad
+import           Control.Monad                    (liftM2)
 import           Data.List                        (lookup)
 import           Data.Map                         (Map, fromList,
                                                    union)
-import qualified Data.Map                         as M
-import           Safe
-import           System.FilePath
+import qualified Data.Map                         as M (Map, fromList,
+                                                        lookup)
+import           Safe                             (fromJustDef,
+                                                   headDef, readMay)
+import           System.FilePath                  (dropTrailingPathSeparator,
+                                                   takeBaseName)
 
 -- xmonad core
 import           XMonad                           hiding (focus)
 import           XMonad.StackSet                  hiding (workspaces)
-import qualified XMonad.StackSet                  as S
+import qualified XMonad.StackSet                  as S (workspaces)
 
 -- xmonad contrib
-import           XMonad.Actions.Commands
-import           XMonad.Actions.CycleRecentWS
-import           XMonad.Actions.CycleWindows
-import           XMonad.Actions.GridSelect
-import           XMonad.Config.Desktop
-import           XMonad.Hooks.DynamicBars
-import           XMonad.Hooks.DynamicLog
-import           XMonad.Hooks.ManageDocks
-import           XMonad.Hooks.ServerMode
-import qualified XMonad.Layout.BoringWindows      as B
-import           XMonad.Layout.IndependentScreens
-import           XMonad.Layout.LayoutModifier
-import           XMonad.Layout.WindowNavigation
-import           XMonad.Util.NamedWindows
+import           XMonad.Actions.Commands          (defaultCommands)
+import           XMonad.Actions.CycleRecentWS     (cycleWindowSets)
+import           XMonad.Actions.CycleWindows      (rotUp)
+import           XMonad.Actions.GridSelect        (GSConfig (gs_cellheight, gs_cellwidth, gs_font),
+                                                   bringSelected,
+                                                   goToSelected, gridselectWorkspaceShow)
+import           XMonad.Config.Desktop            (desktopConfig)
+import           XMonad.Hooks.DynamicBars         (dynStatusBarEventHook,
+                                                   multiPP)
+import           XMonad.Hooks.DynamicLog          (xmobarColor)
+import           XMonad.Hooks.ManageDocks         (AvoidStruts, Direction2D (D, L, R, U))
+import           XMonad.Hooks.ServerMode          (serverModeEventHookF)
+import qualified XMonad.Layout.BoringWindows      as B (focusMaster)
+import           XMonad.Layout.IndependentScreens (PhysicalWorkspace,
+                                                   VirtualWorkspace,
+                                                   unmarshall,
+                                                   unmarshallW)
+import           XMonad.Layout.LayoutModifier     (ModifiedLayout)
+import           XMonad.Layout.WindowNavigation   (Navigate (Go))
+import           XMonad.Util.NamedWindows         (getName)
 
+-- local imports
 import           XMonad.Actions.Task
-import           XMonad.Config.TaskActionConfig
-import           XMonad.Config.XmobarConfig
-import           XMonad.Hooks.TaskCommands
+import           XMonad.Config.TaskActionConfig   (taskActions)
+import           XMonad.Config.XmobarConfig       (barCreator,
+                                                   barDestroyer, pp)
+import           XMonad.Hooks.TaskCommands        (serverModeTaskEventHookCmd')
 
 taskConfig :: XConfig
                 (XMonad.Layout.LayoutModifier.ModifiedLayout

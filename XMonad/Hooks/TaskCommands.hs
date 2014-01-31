@@ -5,19 +5,21 @@ module XMonad.Hooks.TaskCommands
    ) where
 
 -- system imports
-import           Data.List
-import           Data.Maybe
-import           Data.Monoid
-import           Safe
-import           System.IO
+import           Data.List               (isPrefixOf)
+import           Data.Maybe              (fromMaybe)
+import           Data.Monoid             (All)
+import           Safe                    (readMay)
+import           System.IO               (hPutStrLn, stderr)
 
 -- xmonad core
-import           XMonad
+import           XMonad                  (Event, X, io, trace)
 
 -- xmonad contrib
-import           XMonad.Hooks.ServerMode
+import           XMonad.Hooks.ServerMode (serverModeEventHookF)
 
-import           XMonad.Actions.Task
+import           XMonad.Actions.Task     (TaskActions,
+                                          addWorkspaceForTask,
+                                          currentWorkspaceAction)
 
 -- $usage
 --

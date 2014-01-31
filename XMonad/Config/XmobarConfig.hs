@@ -9,24 +9,28 @@ module XMonad.Config.XmobarConfig
    ) where
 
 -- system imports
-import           Data.Default
--- import           Safe
+import           Data.Default                     (Default (def))
 
 -- xmonad core
-import           XMonad                           hiding (workspaces)
-import           XMonad.StackSet
--- import qualified XMonad.StackSet                  as S
+import           XMonad                           (ScreenId (S),
+                                                   WindowSpace, X,
+                                                   XState (windowset),
+                                                   gets)
+import           XMonad.StackSet                  (Screen (screen),
+                                                   StackSet (current))
 
 -- xmonad contrib
-import           XMonad.Hooks.DynamicBars
-import           XMonad.Hooks.DynamicLog
-import           XMonad.Layout.IndependentScreens
+import           XMonad.Hooks.DynamicBars         (DynamicStatusBar, DynamicStatusBarCleanup)
+import           XMonad.Hooks.DynamicLog          (PP (ppCurrent, ppHiddenNoWindows, ppOrder, ppSep, ppSort, ppTitle, ppUrgent, ppVisible),
+                                                   shorten,
+                                                   xmobarColor)
+import           XMonad.Layout.IndependentScreens (marshallSort)
 import           XMonad.Util.Run                  (spawnPipe)
 
 --local, for debugging, similar to IPPrint
 --import PPrint
 -- import           XMonad.Actions.Task
-import           XMonad.Util.DTrace
+import           XMonad.Util.DTrace               (dtrace)
 
 barCreator :: DynamicStatusBar
 barCreator (S sid) = do dtrace ("CREATING xmobar " ++ show sid)

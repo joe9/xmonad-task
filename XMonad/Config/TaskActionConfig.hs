@@ -9,22 +9,27 @@ module XMonad.Config.TaskActionConfig
    ) where
 
 -- system imports
-import qualified Data.Map                         as M
-import           Safe
-import           System.FilePath
+import qualified Data.Map                         as M (fromList)
+import           Safe                             (headDef, readMay)
+import           System.FilePath                  (dropTrailingPathSeparator,
+                                                   takeBaseName)
 -- import           System.Process
 
 -- xmonad core
 import           XMonad                           hiding (focus,
                                                    workspaces)
-import           XMonad.StackSet
+import           XMonad.StackSet                  (Workspace (tag))
 
 
 -- xmonad contrib
+import           XMonad.Hooks.DynamicLog          (xmobarColor)
+import           XMonad.Layout.IndependentScreens (PhysicalWorkspace,
+                                                   VirtualWorkspace,
+                                                   marshall,
+                                                   unmarshallS,
+                                                   unmarshallW)
+import           XMonad.Layout.LayoutCombinators  (JumpToLayout (JumpToLayout))
 -- import           XMonad.Actions.SpawnOn
-import           XMonad.Hooks.DynamicLog
-import           XMonad.Layout.IndependentScreens
-import           XMonad.Layout.LayoutCombinators
 
 import           XMonad.Actions.Task
 

@@ -133,29 +133,21 @@ type TaskActions a b = M.Map Name (TaskAction a b)
 
 data TaskAction a b =
   TaskAction  { taStartup         :: Task -> X ()
-               , taXmobarShow     :: a -> WorkspaceId -> String
-               , taGridSelectShow :: b -> WindowSpace -> String
+               , taXmobarShow     :: a -> Task -> WorkspaceId -> String
+               , taGridSelectShow :: b -> Task -> WindowSpace -> String
                }
 
 nullTaskAction :: TaskAction a b
-nullTaskAction = TaskAction (\_ -> return ()) (\_ w -> w) (\_ -> tag)
+nullTaskAction = TaskAction (\_ -> return ()) (\_ _ w -> w) (\_ _ -> tag)
 
-tasksPP :: (WindowSet -> X (M.Map WorkspaceId a))
-            -> TaskActions a b
-            -> PP
-            -> X PP
+tasksPP :: Show a => (WindowSet -> X (M.Map WorkspaceId a))
+                    -> TaskActions a b
+                    -> PP
+                    -> X PP
 tasksPP f tas pp = do
   wsInfo <- (gets windowset >>= f)
-  let g = (\wsid -> (\ff -> h ff (M.lookup wsid wsInfo) wsid)
-                    . taXmobarShow
-                    . fromJustDef nullTaskAction
-                    . flip M.lookup tas
-                    . tAction
-                    . workspaceIdToTask
-                    $ wsid )
-      h _  (Nothing) wsid = wsid
-      h ff (Just t) wsid  = ff t wsid
-  -- logTitle >>= trace . fromJustDef ""
+  let g = tasksPP' tas wsInfo
+  -- io $ dtrace wsInfo
   return $
     pp { ppCurrent         = ppCurrent         pp . g
        , ppVisible         = ppVisible         pp . g
@@ -163,6 +155,18 @@ tasksPP f tas pp = do
        , ppHiddenNoWindows = ppHiddenNoWindows pp . g
        , ppUrgent          = ppUrgent          pp . g
        }
+
+tasksPP' :: TaskActions a b -> M.Map WorkspaceId a -> WorkspaceId -> String
+tasksPP' tas wsInfo wsid =
+             (\ff -> h ff (M.lookup wsid wsInfo) t wsid)
+                    . taXmobarShow
+                    . fromJustDef nullTaskAction
+                    . flip M.lookup tas
+                    . tAction
+                    $ t
+  where h _  (Nothing) _ = id
+        h ff (Just b) task = ff b task
+        t = workspaceIdToTask wsid
 
 workspaceIdToTask :: WorkspaceId -> Task
 workspaceIdToTask =

@@ -12,7 +12,7 @@ module XMonad.Config.TaskActionConfig
 import qualified Data.Map                         as M
 import           Safe
 import           System.FilePath
-import           System.Process
+-- import           System.Process
 
 -- xmonad core
 import           XMonad                           hiding (focus,
@@ -31,11 +31,11 @@ import           XMonad.Actions.Task
 taskActions :: TaskActions (Int,String) (Int,String)
 taskActions =
   M.fromList
-    [ ("terminal" , taf (terminals 1))
+    [ ("terminal"  , taf (terminals 1))
     , ("1terminal" , taf (terminals 1))
     , ("2terminal" , ta (terminals 2))
     , ("3terminal" , ta (terminals 3))
-    , ("Nothing"   , ta (\_ -> return ()))
+    , ("None"      , ta (\_ -> return ()))
     ]
   where ta f  = nullTaskAction
                  { taStartup    = f
@@ -53,29 +53,33 @@ taskActions =
 toLayout :: String -> X ()
 toLayout = sendMessage . JumpToLayout
 
-gridSelectShowWorkspace :: (Int,String) -> WindowSpace -> String
-gridSelectShowWorkspace (n,t) w =
+gridSelectShowWorkspace :: (Int,String) -> Task -> WindowSpace -> String
+gridSelectShowWorkspace (n,ttle) _ w =
   show n
     ++ " "
     ++ (marshall scr . xmobarShowTask . tag $ w)
     ++ " "
     -- ++ (headDef "" . words) t
-    ++ t
+    ++ ttle
   where scr = unmarshallS . tag $ w
 
 terminals :: Int -> Task -> X()
 terminals n t =
-  (io . trace $ "mkdir --parents " ++ tDir t)
-     >> io (callProcess "/bin/mkdir" ["--parents", tDir t])
+  (io . trace $ "starting in " ++ tDir t)
+  -- (io . trace $ "mkdir --parents " ++ tDir t)
+     -- >> io (callProcess "/bin/mkdir" ["--parents", tDir t])
      >> ((spawnShellIn . tDir $ t) >*> n)
 
-xmobarShowTaskDirNumTitle :: (Int,String) -> PhysicalWorkspace -> String
-xmobarShowTaskDirNumTitle (n,t) wsid =
-  xmobarColor "white" "" (xmobarShowTask wsid)
+xmobarShowTaskDirNumTitle ::
+  (Int,String) -> Task -> PhysicalWorkspace -> String
+xmobarShowTaskDirNumTitle (n,ttle) task _ =
+  -- xmobarColor "white" "" (xmobarShowTask wsid)
+  xmobarColor "white" "" (t task)
    ++ "-"
    ++ show n
    ++ "-"
-   ++ (headDef "" . words) t
+   ++ (headDef "" . words) ttle
+  where t = takeBaseName . dropTrailingPathSeparator . tDir
 
 xmobarShowTask :: PhysicalWorkspace -> String
 xmobarShowTask w =

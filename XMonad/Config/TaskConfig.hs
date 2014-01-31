@@ -227,16 +227,16 @@ gridselectShowWindowSpace :: TaskActions a b
                                 -> WindowSpace
                                 -> String
 gridselectShowWindowSpace tas bs ws =
-  (\f -> j f (M.lookup (tag ws) bs) ws)
+  (\f -> j f (M.lookup (tag ws) bs) (toTask ws) ws)
                 . taGridSelectShow
                 . fromJustDef nullTaskAction
                 . flip M.lookup tas
                 . tAction
-                . workspaceIdToTask
-                . tag
+                . toTask
                 $ ws
-  where j _  (Nothing) = tag
-        j f (Just b)   = f b
+  where j _  (Nothing) _ = tag
+        j f (Just b)   t = f b t
+        toTask = workspaceIdToTask . tag
 
 windowSpacesNumTitles :: WindowSet -> X (M.Map WorkspaceId (Int,String))
 windowSpacesNumTitles s =

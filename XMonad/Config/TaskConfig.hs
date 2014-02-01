@@ -53,7 +53,7 @@ import           XMonad.Config.TaskActionConfig   (taskActions)
 import           XMonad.Config.XmobarConfig       (barCreator,
                                                    barDestroyer, pp)
 import           XMonad.Hooks.TaskCommands        (serverModeTaskEventHookCmd')
-import           XMonad.Util.DTrace               (dtrace)
+-- import           XMonad.Util.DTrace               (dtrace)
 
 taskConfig :: XConfig
                 (XMonad.Layout.LayoutModifier.ModifiedLayout

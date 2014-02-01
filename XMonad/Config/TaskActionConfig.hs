@@ -41,15 +41,16 @@ import           XMonad.Util.DTrace
 taskActions :: TaskActions (Int,String) (Int,String)
 taskActions =
   M.fromList
-    [ ("terminal"  , taf (terminals 1))
-    , ("1terminal" , taf (terminals 1))
-    , ("2terminal" , ta (terminals 2))
-    , ("3terminal" , ta (terminals 3))
-    , ("None"      , ta (\_ -> return ()))
-    , ("xmonad-compile" , tam (\t -> tct t "tail -f /var/log/xinit.log"
-                                      >> terminals 1 t
-                                      >> tct t "ghciw xmonad.hs"))
-    , ("mplayer"    , tam (terminals 1))
+    [ ("terminal"  , taf $ terminals 1)
+    , ("1terminal" , taf $ terminals 1)
+    , ("2terminal" , ta  $ terminals 2)
+    , ("3terminal" , ta  $ terminals 3)
+    , ("None"      , ta  $ \_ -> return ())
+    , ("mplayer"   , tam $ terminals 1)
+    , ("xmonad-compile"
+        , tam (\t -> tct t "tail -f /var/log/xinit.log"
+                        >> terminals 1 t
+                        >> tct t "ghciw xmonad.hs"))
     ]
   where ta f  = nullTaskAction
                  { taStartup    = f
@@ -128,7 +129,7 @@ spawnShellWithCommandIn dir cmd =
   where command t = unwords  [ "cd", dir, "&&", t, "new-session"
                              , show . unwords
                                    $ [ "exec /bin/zsh -is eval"
-                                     , cmd
+                                     , show cmd
                                      ]
                              ]
 

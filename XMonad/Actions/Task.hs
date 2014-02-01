@@ -71,73 +71,6 @@ import           XMonad.Util.Run                  (spawnPipe)
 -- below not contributed to xmonad contrib yet
 import           XMonad.Util.DTrace               (dtrace)
 
--- $overview
--- This module allows to organize your workspaces on a precise task
--- basis.  So instead of having a workspace called `work' you can
--- setup one workspace per task.  Here we call these workspaces,
--- tasks. The great thing with tasks is that one can attach a
--- directory, starting layout and ScreenId that makes sense to each
--- particular task.  One can also attach an action which will be
--- triggered when switching to a topic that does not have any windows
--- in it.  So you can attach your mail client to the mail task, some
--- terminals in the right directory to the xmonad task... This package
--- also provides a nice way to display your tasks in an historical
--- way using a custom `pprWindowSet' function. You can also easily
--- switch to recent tasks using this history of last focused tasks.
-
--- $usage
--- Here is an example of configuration using TopicSpace:
---
--- > -- The list of all tasks/workspaces of your xmonad configuration.
--- > -- The order is important, new tasks must be inserted
--- > -- at the end of the list if you want hot-restarting
--- > -- to work.
--- > startupTasks, tasks :: [Task]
--- > startupTasks = tasks
--- > tasks =
--- >   (  concat
--- >         . replicate 3
--- >         . map (\s -> Task "terminal" (S s) "/home/j/" 0)
--- >         $ [0..1])
--- >     ++   concatMap f   [ "/home/j/etc/zsh"
--- >                       , "/home/j/etc/X11"
--- >                       , "/home/j/etc/emacs/emacs.d"
--- >                       ]
--- >     ++   map ff1   [ "/home/j/Desktop/"
--- >                         , "/home/j/etc/emacs/emacs.d"
--- >                         , "/home/j/"
--- >                         , "/home/j/"
--- >                         , "/var/log"
--- >                         ]
--- >     ++   map ff0 [ "/home/j/"
--- >                 , "/home/j/etc/xmonad"
--- >                 ]
--- >   where
--- >       f d = map (\s -> Task "terminal" (S s) d 0) [0..1]
--- >       ff1 d = Task "terminal" (S 1) d 0
--- >       ff0 d = Task "terminal" (S 0) d 0
--- >
--- > taskActions :: TaskActions (Int,String) (Int,String)
--- > taskActions =
--- >   M.fromList
--- >     [ ("terminal"  , taf (terminals 1))
--- >     , ("1terminal" , taf (terminals 1))
--- >     , ("2terminal" , ta (terminals 2))
--- >     , ("3terminal" , ta (terminals 3))
--- >     , ("None"      , ta (\_ -> return ()))
--- >     ]
--- >   where ta f  = nullTaskAction
--- >                  { taStartup    = f
--- >                  , taXmobarShow = xmobarShowTaskDirNumTitle
--- >                  , taGridSelectShow = gridSelectShowWorkspace
--- >                  }
--- >         taf f = nullTaskAction
--- >                  { taStartup = \t -> f t >> l "Full"
--- >                  , taXmobarShow = xmobarShowTaskDirNumTitle
--- >                  , taGridSelectShow = gridSelectShowWorkspace
--- >                  }
--- >         l = toLayout
-
 type Dir = FilePath
 type Name = String
 
@@ -344,3 +277,69 @@ spawnShellIn dir =
   asks (terminal . config)
     >>= (\t -> spawnHere . unwords $ ["cd", dir, "&&", t])
 
+-- $overview
+-- This module allows to organize your workspaces on a precise task
+-- basis.  So instead of having a workspace called `work' you can
+-- setup one workspace per task.  Here we call these workspaces,
+-- tasks. The great thing with tasks is that one can attach a
+-- directory, starting layout and ScreenId that makes sense to each
+-- particular task.  One can also attach an action which will be
+-- triggered when switching to a topic that does not have any windows
+-- in it.  So you can attach your mail client to the mail task, some
+-- terminals in the right directory to the xmonad task... This package
+-- also provides a nice way to display your tasks in an historical
+-- way using a custom `pprWindowSet' function. You can also easily
+-- switch to recent tasks using this history of last focused tasks.
+
+-- $usage
+-- Here is an example of configuration using TopicSpace:
+--
+-- > -- The list of all tasks/workspaces of your xmonad configuration.
+-- > -- The order is important, new tasks must be inserted
+-- > -- at the end of the list if you want hot-restarting
+-- > -- to work.
+-- > startupTasks, tasks :: [Task]
+-- > startupTasks = tasks
+-- > tasks =
+-- >   (  concat
+-- >         . replicate 3
+-- >         . map (\s -> Task "terminal" (S s) "/home/j/" 0)
+-- >         $ [0..1])
+-- >     ++   concatMap f   [ "/home/j/etc/zsh"
+-- >                       , "/home/j/etc/X11"
+-- >                       , "/home/j/etc/emacs/emacs.d"
+-- >                       ]
+-- >     ++   map ff1   [ "/home/j/Desktop/"
+-- >                         , "/home/j/etc/emacs/emacs.d"
+-- >                         , "/home/j/"
+-- >                         , "/home/j/"
+-- >                         , "/var/log"
+-- >                         ]
+-- >     ++   map ff0 [ "/home/j/"
+-- >                 , "/home/j/etc/xmonad"
+-- >                 ]
+-- >   where
+-- >       f d = map (\s -> Task "terminal" (S s) d 0) [0..1]
+-- >       ff1 d = Task "terminal" (S 1) d 0
+-- >       ff0 d = Task "terminal" (S 0) d 0
+-- >
+-- > taskActions :: TaskActions (Int,String) (Int,String)
+-- > taskActions =
+-- >   M.fromList
+-- >     [ ("terminal"  , taf (terminals 1))
+-- >     , ("1terminal" , taf (terminals 1))
+-- >     , ("2terminal" , ta (terminals 2))
+-- >     , ("3terminal" , ta (terminals 3))
+-- >     , ("None"      , ta (\_ -> return ()))
+-- >     ]
+-- >   where ta f  = nullTaskAction
+-- >                  { taStartup    = f
+-- >                  , taXmobarShow = xmobarShowTaskDirNumTitle
+-- >                  , taGridSelectShow = gridSelectShowWorkspace
+-- >                  }
+-- >         taf f = nullTaskAction
+-- >                  { taStartup = \t -> f t >> l "Full"
+-- >                  , taXmobarShow = xmobarShowTaskDirNumTitle
+-- >                  , taGridSelectShow = gridSelectShowWorkspace
+-- >                  }
+-- >         l = toLayout

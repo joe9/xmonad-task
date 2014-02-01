@@ -64,7 +64,7 @@ taskActions =
         tam f = TaskAction (\t -> f t >> l "Mosaic")
                             xActionNum
                             gsNumActionTitle
-        tct t = flip terminalWithCommand t . show
+        tct t = flip terminalWithCommand t
         l = toLayout
 
 toLayout :: String -> X ()

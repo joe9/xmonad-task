@@ -49,7 +49,7 @@ taskActions =
     , ("xmonad-compile" , tam (\t -> tct t "tail -f /var/log/xinit.log"
                                       >> terminals 1 t
                                       >> tct t "ghciw xmonad.hs"))
-    , ("mplayer"    , taf (terminals 1))
+    , ("mplayer"    , tam (terminals 1))
     ]
   where ta f  = nullTaskAction
                  { taStartup    = f

@@ -53,6 +53,7 @@ import           XMonad.Config.TaskActionConfig   (taskActions)
 import           XMonad.Config.XmobarConfig       (barCreator,
                                                    barDestroyer, pp)
 import           XMonad.Hooks.TaskCommands        (serverModeTaskEventHookCmd')
+import           XMonad.Util.DTrace               (dtrace)
 
 taskConfig :: XConfig
                 (XMonad.Layout.LayoutModifier.ModifiedLayout
@@ -104,7 +105,12 @@ tasks =
     ++   map ff0 [ "/home/j/"
                 , "/home/j/etc/xmonad"
                 ]
+    ++   [  t  "None"            1  "/tmp"
+        ,  t  "xmonad-compile"  1  "/home/j/etc/xmonad"
+        ,  t  "mplayer"         1  "/tmp/"
+        ]
   where
+      t n s d = Task n (S s) d 0
       f d = map (\s -> Task "terminal" (S s) d 0) [0..1]
       ff1 d = Task "terminal" (S 1) d 0
       ff0 d = Task "terminal" (S 0) d 0
@@ -256,6 +262,7 @@ windowSpacesNumTitles s =
 
 windowSpaceNumTitle :: WindowSpace -> X (WorkspaceId,(Int,String))
 windowSpaceNumTitle ws = do
+  -- io . dtrace $ "windowSpaceNumTitle: workspaceId " ++ (tag ws)
   wTitle <- maybe (return "") (fmap show . getName . focus) . stack $ ws
   return (tag ws,(numOfWindows ws, wTitle))
 

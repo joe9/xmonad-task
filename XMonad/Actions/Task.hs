@@ -154,8 +154,7 @@ isCurrentWorkspaceATask =
 -- assumes that the task is current
 currentTaskAction :: TaskActions a b -> X ()
 currentTaskAction tas =
-   withWindowSet $
-      doTaskAction tas . workspaceIdToTask . currentTag
+   withWindowSet $ doTaskAction tas . workspaceIdToTask . currentTag
 
 -- assumes that the task is current
 doTaskAction :: TaskActions a b -> Task -> X ()
@@ -187,12 +186,10 @@ infix >*>
 currentScreen :: WindowSet -> ScreenId
 currentScreen = screen . current
 
-isOnCurrentScreen :: ScreenId -> WorkspaceId
-                             -> Bool
+isOnCurrentScreen :: ScreenId -> WorkspaceId -> Bool
 isOnCurrentScreen (S i) = isPrefixOf (show i ++ "_")
 
-workspacesOnCurrentScreen :: ScreenId -> [WindowSpace]
-                           -> [WindowSpace]
+workspacesOnCurrentScreen :: ScreenId -> [WindowSpace] -> [WindowSpace]
 workspacesOnCurrentScreen s =
   Data.List.filter (isOnCurrentScreen s . tag)
 
@@ -211,8 +208,7 @@ nonEmptyHddensOnCurrentScreen :: WindowSet -> [WindowSpace]
 nonEmptyHddensOnCurrentScreen =
   Data.List.filter (isJust . stack) . hiddensOnCurrentScreen
 
-onNthLastFocussed :: Int -> (WorkspaceId -> WindowSet -> WindowSet)
-                    -> X ()
+onNthLastFocussed :: Int -> (WorkspaceId -> WindowSet -> WindowSet) -> X ()
 onNthLastFocussed i f = withWindowSet $ \ws -> do
     let ws' = visiblesOnCurrentScreen ws
               ++ nonEmptyHddensOnCurrentScreen ws

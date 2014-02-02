@@ -6,6 +6,7 @@ module XMonad.Config.TaskConfig
    , gridselectWorkspaceShowAndGoto
    , xmobarShowTaskWithNumberOfWindowsAndFocussedTitle
    , windowSpacesNumTitles
+   , gridselectWorkspaceShow
    ) where
 
 -- system imports
@@ -31,7 +32,8 @@ import           XMonad.Actions.CycleRecentWS     (cycleWindowSets)
 import           XMonad.Actions.CycleWindows      (rotUp)
 import           XMonad.Actions.GridSelect        (GSConfig (gs_cellheight, gs_cellwidth, gs_font),
                                                    bringSelected,
-                                                   goToSelected, gridselectWorkspaceShow)
+                                                   goToSelected,
+                                                   gridselect)
 import           XMonad.Config.Desktop            (desktopConfig)
 import           XMonad.Hooks.DynamicBars         (dynStatusBarEventHook,
                                                    multiPP)
@@ -288,3 +290,16 @@ showTask :: VirtualWorkspace -> Maybe Task -> String
 showTask w (Nothing) = w
 showTask _ (Just t) =
   takeBaseName . dropTrailingPathSeparator . tDir $ t
+
+gridselectWorkspaceShow :: GSConfig WorkspaceId
+                           -> (WindowSpace -> String)
+                           -> (WorkspaceId -> WindowSet -> WindowSet)
+                           -> X ()
+gridselectWorkspaceShow conf showWorkspace viewFunc = withWindowSet $ \ws -> do
+    let wss = S.workspaces ws
+        -- wss = map W.tag ws
+    -- trace $ show (zip wss wss)
+    -- trace . show . map (\w -> (showWorkspace w,tag w)) $ wss
+    -- trace $ show (zip (map (showWorkspaceId ws) wss) wss)
+    -- gridselect conf (zip (map (showWorkspaceId ws) wss) wss) >>= flip whenJust (windows . viewFunc)
+    gridselect conf (map (\w -> (showWorkspace w,tag w)) wss) >>= flip whenJust (windows . viewFunc)

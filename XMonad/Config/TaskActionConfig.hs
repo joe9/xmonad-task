@@ -112,9 +112,11 @@ showTask _ (Just t) =
 -- terminals n t = (spawnShellIn . tDir $ t) >*> n
 
 spawnShellWithCommand :: String -> X ()
-spawnShellWithCommand cmd =
-  gets (tag . workspace . current . windowset)
-  >>= flip spawnShellWithCommandIn cmd . tDir . workspaceIdToTask
+spawnShellWithCommand cmd = withWindowSet $
+  flip spawnShellWithCommandIn cmd
+    . tDir
+    . workspaceIdToTask
+    . currentTag
 
 type Dir = FilePath
 spawnShellWithCommandIn :: Dir -> String -> X ()

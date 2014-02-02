@@ -14,8 +14,7 @@ import           Data.Default                     (Default (def))
 -- xmonad core
 import           XMonad                           (ScreenId (S),
                                                    WindowSpace, X,
-                                                   XState (windowset),
-                                                   gets)
+                                                   withWindowSet)
 import           XMonad.StackSet                  (Screen (screen),
                                                    StackSet (current))
 
@@ -96,8 +95,11 @@ addPosition (x:xs) =
 -- below from XMonad.Layout.IndependentScreens
 showOnlyCurrentScreenWorkspaces :: X ([WindowSpace] -> [WindowSpace])
 showOnlyCurrentScreenWorkspaces =
-  gets (screen . current . windowset)
-  >>= (\s -> return $ marshallSort s id)
+   withWindowSet
+      $ \ws -> return $ flip marshallSort id . screen . current $ ws
+
+--    gets (screen . current . windowset)
+--      >>= (\s -> return $ marshallSort s id)
 
 -- stripScreenPrefix :: String -> String
 -- stripScreenPrefix ('0':'_':xs) = xs

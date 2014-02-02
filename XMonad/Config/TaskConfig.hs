@@ -231,8 +231,7 @@ gridselectWorkspaceShowAndGoto ::
     -> (WorkspaceId -> WindowSet -> WindowSet)
     -> X ()
 gridselectWorkspaceShowAndGoto f taskactions h =
-    gets windowset
-       >>= f
+    withWindowSet f
        >>= (\wsInfo -> gridselectWorkspaceShow
                         gsConfigWorkspace
                         (gridselectShowWindowSpace taskactions wsInfo)

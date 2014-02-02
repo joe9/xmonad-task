@@ -97,7 +97,7 @@ tasksPP :: Show a => (WindowSet -> X (M.Map WorkspaceId a))
                     -> PP
                     -> X PP
 tasksPP f tas pp = do
-  wsInfo <- gets windowset >>= f
+  wsInfo <- withWindowSet f
   let g = tasksPP' tas wsInfo
   -- io $ dtrace wsInfo
   return $
@@ -135,13 +135,13 @@ isTaskOnScreen s = (==) s . tScreen
 
 -- -- | Switch to the given workspace.
 currentWorkspaceAction :: TaskActions a b -> X ()
-currentWorkspaceAction tas = do
-  io $ dtrace "currentWorkspaceAction: started"
-  wsid <- gets (tag . workspace . current . windowset)
-  if isCurrentWorkspaceATask wsid
+currentWorkspaceAction tas = withWindowSet $ \ws -> do
+   io $ dtrace "currentWorkspaceAction: started"
+   if isCurrentWorkspaceATask . currentTag $ ws
     then currentTaskAction tas
-    -- else return ()
-    else io $ dtrace "currentWorkspaceAction: isCurrentWorkspaceATask is false"
+    else io $
+          dtrace
+            "currentWorkspaceAction: isCurrentWorkspaceATask is false"
 
 isCurrentWorkspaceATask :: WorkspaceId -> Bool
 isCurrentWorkspaceATask =
@@ -153,18 +153,13 @@ isCurrentWorkspaceATask =
 -- assumes that the task is current
 currentTaskAction :: TaskActions a b -> X ()
 currentTaskAction tas =
-   gets(workspaceIdToTask
-                     . tag
-                     . workspace
-                     . current
-                     . windowset)
-   >>= doTaskAction tas
+   withWindowSet $
+      doTaskAction tas . workspaceIdToTask . currentTag
 
 -- assumes that the task is current
 doTaskAction :: TaskActions a b -> Task -> X ()
-doTaskAction tas t = do
-   workSpace <- gets(workspace . current . windowset)
-   when (isNothing . stack $ workSpace)
+doTaskAction tas t = withWindowSet $ \ws ->
+   when (isNothing . stack . workspace . current $ ws)
      . (\f -> f t)
      . taStartup
      . fromJustDef nullTaskAction
@@ -181,6 +176,7 @@ startupTaskWorkspaces startId i ts =
     where fs = [taskToWorkspace (S s) t | t <- ts
                                         , s <- [0..(i-1)]
                                         , S s == tScreen t]
+
 taskToWorkspace :: ScreenId -> Task -> Int -> Maybe WorkspaceId
 taskToWorkspace s t i = taskToWorkspaceId s (t {tId = i})
 
@@ -218,8 +214,7 @@ nonEmptyHddensOnCurrentScreen =
 
 onNthLastFocussed :: Int -> (WorkspaceId -> WindowSet -> WindowSet)
                     -> X ()
-onNthLastFocussed i f = do
-    ws <- gets windowset
+onNthLastFocussed i f = withWindowSet $ \ws -> do
     let ws' = visiblesOnCurrentScreen ws
               ++ nonEmptyHddensOnCurrentScreen ws
     windows
@@ -248,8 +243,7 @@ xmessage s = do
 addWorkspaceForTask :: String -> Maybe Task -> X ()
 addWorkspaceForTask rawt Nothing =
   io $ hPutStrLn stderr ("addWorkspaceForTask: Could not read string to task: " ++ rawt)
-addWorkspaceForTask _ (Just t) = do
-  ws <- gets windowset
+addWorkspaceForTask _ (Just t) = withWindowSet $ \ws -> do
   let tid     = getMaximumTaskId ws + 1
       newtask = t {tId = tid}
   trace $ show tid
@@ -269,8 +263,7 @@ getMaximumTaskId =
 
 spawnShell :: X ()
 spawnShell =
-  gets (tag . workspace . current . windowset)
-  >>= spawnShellIn . tDir . workspaceIdToTask
+  withWindowSet $ spawnShellIn . tDir . workspaceIdToTask . currentTag
 
 spawnShellIn :: Dir -> X ()
 spawnShellIn dir =

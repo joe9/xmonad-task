@@ -141,8 +141,8 @@ currentWorkspaceAction tas =
        (and . map ($ ws) $ [ isCurrentWorkspaceATask . currentTag
                            , isNothing . stack . workspace . current
                            ])
-       (io $ dtrace "currentWorkspaceAction: starting")
-         >> currentTaskAction tas
+       $ io (dtrace "currentWorkspaceAction: starting")
+           >> currentTaskAction tas
 
 isCurrentWorkspaceATask :: WorkspaceId -> Bool
 isCurrentWorkspaceATask =

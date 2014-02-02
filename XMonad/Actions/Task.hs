@@ -135,13 +135,14 @@ isTaskOnScreen s = (==) s . tScreen
 
 -- -- | Switch to the given workspace.
 currentWorkspaceAction :: TaskActions a b -> X ()
-currentWorkspaceAction tas = withWindowSet $ \ws -> do
-   io $ dtrace "currentWorkspaceAction: started"
-   if isCurrentWorkspaceATask . currentTag $ ws
-    then currentTaskAction tas
-    else io $
-          dtrace
-            "currentWorkspaceAction: isCurrentWorkspaceATask is false"
+currentWorkspaceAction tas =
+  withWindowSet $ \ws ->
+    when
+       (and . map ($ ws) $ [ isCurrentWorkspaceATask . currentTag
+                           , isNothing . stack . workspace . current
+                           ])
+       (io $ dtrace "currentWorkspaceAction: starting")
+         >> currentTaskAction tas
 
 isCurrentWorkspaceATask :: WorkspaceId -> Bool
 isCurrentWorkspaceATask =
@@ -158,13 +159,11 @@ currentTaskAction tas =
 
 -- assumes that the task is current
 doTaskAction :: TaskActions a b -> Task -> X ()
-doTaskAction tas t = withWindowSet $ \ws ->
-   when (isNothing . stack . workspace . current $ ws)
-     . (\f -> f t)
-     . taStartup
-     . fromJustDef nullTaskAction
-     . M.lookup (tAction t)
-     $ tas
+doTaskAction tas t = (\f -> f t)
+                        . taStartup
+                        . fromJustDef nullTaskAction
+                        . M.lookup (tAction t)
+                        $ tas
 
 type NumberOfScreens = Int
 startupTaskWorkspaces :: Int -> NumberOfScreens -> [Task] -> [WorkspaceId]

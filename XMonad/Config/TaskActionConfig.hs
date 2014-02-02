@@ -65,7 +65,7 @@ taskActions =
         tam f = TaskAction (\t -> f t >> l "Mosaic")
                             xActionNum
                             gsNumActionTitle
-        tct t = flip terminalWithCommand t
+        tct   = flip terminalWithCommand
         l = toLayout
 
 toLayout :: String -> X ()
@@ -122,7 +122,7 @@ type Dir = FilePath
 spawnShellWithCommandIn :: Dir -> String -> X ()
 spawnShellWithCommandIn dir cmd =
   asks (terminal . config)
-    >>= (\t -> (spawnHere $ command t)
+    >>= (\t -> spawnHere (command t)
                >> (io . dtrace $ command t)
         )
   -- $ ["cd", dir, "&&", "ZSHSTARTUPCMD="++cmd, t]

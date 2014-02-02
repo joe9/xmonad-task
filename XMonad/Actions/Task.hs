@@ -138,9 +138,9 @@ currentWorkspaceAction :: TaskActions a b -> X ()
 currentWorkspaceAction tas =
   withWindowSet $ \ws ->
     when
-       (and . map ($ ws) $ [ isCurrentWorkspaceATask . currentTag
-                           , isNothing . stack . workspace . current
-                           ])
+       (all ($ ws) [ isCurrentWorkspaceATask . currentTag
+                   , isNothing . stack . workspace . current
+                   ])
        $ io (dtrace "currentWorkspaceAction: starting")
            >> currentTaskAction tas
 

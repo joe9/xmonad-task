@@ -110,14 +110,14 @@ tasksPP f tas pp = do
 
 tasksPP' :: TaskActions a b -> M.Map WorkspaceId a -> WorkspaceId -> String
 tasksPP' tas wsInfo wsid =
-             (\ff -> h ff (M.lookup wsid wsInfo) t wsid)
+             (\f -> h f (M.lookup wsid wsInfo) t wsid)
                     . taXmobarShow
                     . fromJustDef nullTaskAction
                     . flip M.lookup tas
                     . tAction
                     $ t
-  where h _  (Nothing) _ = id
-        h ff (Just b) task = ff b task
+  where h _  (Nothing) _  = id
+        h f (Just b) task = f b task
         t = workspaceIdToTask wsid
 
 workspaceIdToTask :: WorkspaceId -> Task

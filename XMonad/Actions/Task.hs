@@ -241,12 +241,14 @@ addWorkspaceForTask rawt Nothing =
 addWorkspaceForTask _ (Just t) = withWindowSet $ \ws -> do
   let tid     = getMaximumTaskId ws + 1
       newtask = t {tId = tid}
+      wsid    = marshall (tScreen newtask) (show newtask)
+      wid     = wsid
   trace $ show tid
   trace $ show newtask
-  trace (marshall (tScreen newtask) (show newtask))
+  trace wsid
   -- return ()
-  addHiddenWorkspace (marshall (tScreen newtask) (show newtask))
-  windows $ onScreen (greedyView (marshall (tScreen newtask) (show newtask))) (FocusTag (marshall (tScreen newtask) (show newtask))) (tScreen newtask)
+  addHiddenWorkspace wsid
+  windows $ onScreen (greedyView wid) (FocusTag wid) (tScreen newtask)
 
 getMaximumTaskId :: WindowSet -> Int
 getMaximumTaskId =

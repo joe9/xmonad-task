@@ -1,9 +1,12 @@
 
 {-# OPTIONS_GHC -Wall #-}
 module XMonad.Config.TaskActionConfig
-   ( taskActions
+   ( WindowTitle
+   , NumberOfWindows
+   , taskActions
    , terminals
    , toLayout
+   , xmobarShowTerminalDirNumTitle
    , xmobarShowTaskDirNumTitle
    , gridSelectShowWorkspace
    , gsNumActionTitle
@@ -12,10 +15,15 @@ module XMonad.Config.TaskActionConfig
    ) where
 
 -- system imports
+import           Data.List
 import qualified Data.Map                         as M (fromList)
-import           Safe                             (headDef, readMay)
+import           Safe                             (atDef, headDef,
+                                                   readMay)
 import           System.FilePath                  (dropTrailingPathSeparator,
-                                                   takeBaseName)
+                                                   equalFilePath,
+                                                   isValid,
+                                                   takeBaseName,
+                                                   takeDirectory)
 -- import           System.Process
 
 -- xmonad core
@@ -38,7 +46,10 @@ import           XMonad.Layout.LayoutCombinators  (JumpToLayout (JumpToLayout))
 import           XMonad.Actions.Task
 import           XMonad.Util.DTrace
 
-taskActions :: TaskActions (Int,String) (Int,String)
+type WindowTitle = String
+type NumberOfWindows = Int
+taskActions :: TaskActions (NumberOfWindows,WindowTitle)
+                          (NumberOfWindows,WindowTitle)
 taskActions =
   M.fromList
     [ ("terminal"  , taf $ terminals 1)
@@ -54,12 +65,12 @@ taskActions =
     ]
   where ta f  = nullTaskAction
                  { taStartup    = f
-                 , taXmobarShow = xmobarShowTaskDirNumTitle
+                 , taXmobarShow = xmobarShowTerminalDirNumTitle
                  , taGridSelectShow = gridSelectShowWorkspace
                  }
         taf f = nullTaskAction
                  { taStartup = \t -> f t >> l "Full"
-                 , taXmobarShow = xmobarShowTaskDirNumTitle
+                 , taXmobarShow = xmobarShowTerminalDirNumTitle
                  , taGridSelectShow = gridSelectShowWorkspace
                  }
         tam f = TaskAction (\t -> f t >> l "Mosaic")
@@ -71,7 +82,7 @@ taskActions =
 toLayout :: String -> X ()
 toLayout = sendMessage . JumpToLayout
 
-gridSelectShowWorkspace :: (Int,String) -> Task -> WindowSpace -> String
+gridSelectShowWorkspace :: (NumberOfWindows,WindowTitle) -> Task -> WindowSpace -> String
 gridSelectShowWorkspace (n,ttle) _ w =
   show n
     ++ " "
@@ -88,8 +99,40 @@ terminals n t =
      -- >> io (callProcess "/bin/mkdir" ["--parents", tDir t])
      >> ((spawnShellIn . tDir $ t) >*> n)
 
+xmobarShowTerminalDirNumTitle ::
+  (NumberOfWindows,WindowTitle) -> Task -> PhysicalWorkspace -> String
+xmobarShowTerminalDirNumTitle (n,ttle) task wsid
+  | equalFilePath "/home/j" (tDir task)
+    && "" /= ttle
+    && isPrefixOf "tmux" ttle
+    && (2 < length ws)
+    && isValid ((words ttle) !! 2)
+--     = xmobarColor "red" "" (d . init . atDef "" (words ttle) $ 1)
+    = xmobarColor "white" "" (d . init . atDef "" (words ttle) $ 1)
+         ++ "-"
+--          ++ (tDir task)
+--          ++ "-"
+         ++ show n
+         ++ "-"
+         ++ atDef (headDef "" ws) ws 2
+  | equalFilePath "/home/j" (tDir task)
+    && "" /= ttle
+    && isPrefixOf "emacs" ttle
+    && (2 < length ws)
+    && isValid ((words ttle) !! 3)
+--     = xmobarColor "yellow" "" (de . init . atDef "" (words ttle) $ 3)
+    = xmobarColor "white" "" (de . init . atDef "" (words ttle) $ 3)
+         ++ "-"
+         ++ show n
+         ++ "-"
+         ++ atDef (headDef "" ws) ws 0
+  | otherwise = xmobarShowTaskDirNumTitle (n,ttle) task wsid
+    where d = takeBaseName . dropTrailingPathSeparator
+          ws = words ttle
+          de = takeBaseName . takeDirectory . dropTrailingPathSeparator
+
 xmobarShowTaskDirNumTitle ::
-  (Int,String) -> Task -> PhysicalWorkspace -> String
+  (NumberOfWindows,WindowTitle) -> Task -> PhysicalWorkspace -> String
 xmobarShowTaskDirNumTitle (n,ttle) task _ =
   -- xmobarColor "white" "" (xmobarShowTask wsid)
   xmobarColor "white" "" (t task)
@@ -148,7 +191,7 @@ xActionNum (n,_) task _ =
    ++ "-"
    ++ show n
 
-gsNumActionTitle :: (Int,String) -> Task -> WindowSpace -> String
+gsNumActionTitle :: (NumberOfWindows,WindowTitle) -> Task -> WindowSpace -> String
 gsNumActionTitle (n,ttle) task w =
   show n
     ++ " "

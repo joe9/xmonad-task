@@ -57,7 +57,7 @@ taskActions =
     , ("2terminal" , ta  $ terminals 2)
     , ("3terminal" , ta  $ terminals 3)
     , ("None"      , ta  $ \_ -> return ())
-    , ("mplayer"   , tam $ terminals 1)
+    , ("mpv"   , tam $ terminals 1)
     , ("xmonad-compile"
         , tam (\t -> tct t "tail -f /var/log/xinit.log"
                         >> terminals 1 t

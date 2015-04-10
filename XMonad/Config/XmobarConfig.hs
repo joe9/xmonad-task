@@ -9,46 +9,40 @@ module XMonad.Config.XmobarConfig
    ) where
 
 -- system imports
-import           Data.Default                     (Default (def))
+import Data.Default (Default (def))
 
 -- xmonad core
-import           XMonad                           (ScreenId (S),
-                                                   WindowSpace, X,
-                                                   withWindowSet)
-import           XMonad.StackSet                  (Screen (screen),
-                                                   StackSet (current))
+import XMonad          (ScreenId (S), WindowSpace, X, withWindowSet)
+import XMonad.StackSet (Screen (screen), StackSet (current))
 
 -- xmonad contrib
-import           XMonad.Hooks.DynamicBars         (DynamicStatusBar, DynamicStatusBarCleanup)
-import           XMonad.Hooks.DynamicLog          (PP (ppCurrent, ppHiddenNoWindows, ppOrder, ppSep, ppSort, ppTitle, ppUrgent, ppVisible),
-                                                   shorten,
-                                                   xmobarColor)
-import           XMonad.Layout.IndependentScreens (marshallSort)
-import           XMonad.Util.Run                  (spawnPipe)
+import XMonad.Hooks.DynamicBars         (DynamicStatusBar,
+                                         DynamicStatusBarCleanup)
+import XMonad.Hooks.DynamicLog          (PP (ppCurrent, ppHiddenNoWindows, ppOrder, ppSep, ppSort, ppTitle, ppUrgent, ppVisible),
+                                         shorten, xmobarColor)
+import XMonad.Layout.IndependentScreens (marshallSort)
+import XMonad.Util.Run                  (spawnPipe)
 
 --local, for debugging, similar to IPPrint
 --import PPrint
 -- import           XMonad.Actions.Task
-import           XMonad.Util.DTrace               (dtrace)
+import XMonad.Actions.Task (NumberOfScreens)
+import XMonad.Util.DTrace  (dtrace)
 
 barCreator :: DynamicStatusBar
 barCreator (S sid) = do dtrace ("CREATING xmobar " ++ show sid)
                         spawnPipe . xmobarCommand $ sid
 
-xmobarCommand :: Int -> String
+xmobarCommand :: NumberOfScreens -> String
 xmobarCommand s =
    unwords [ "xmobar"
-           , cfg s
-           , scrn s
+           , configLocation ++ "xmobarrc.screen-" ++ show s
+           , "--screen=" ++ show s
            -- , template s
            ]
    where -- template 0 = ""
          -- template _ = "--template=%StdinReader%"
          configLocation = "/home/j/etc/xmobar/"
-         cfg 0 = configLocation ++ "xmobarrc.acer2223w_monitor"
-         cfg _ = configLocation ++ "xmobarrc.acer1912_monitor"
-         scrn 0 = "--screen=0"
-         scrn _ = "--screen=1"
 
 barDestroyer :: DynamicStatusBarCleanup
 -- barDestroyer = return ()

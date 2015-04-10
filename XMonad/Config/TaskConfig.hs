@@ -10,21 +10,18 @@ module XMonad.Config.TaskConfig
    ) where
 
 -- system imports
-import           Control.Monad                    (liftM2)
-import           Data.List                        (lookup)
-import           Data.Map                         (Map, fromList,
-                                                   union)
-import qualified Data.Map                         as M (Map, fromList,
-                                                        lookup)
-import           Safe                             (fromJustDef,
-                                                   headDef, readMay)
-import           System.FilePath                  (dropTrailingPathSeparator,
-                                                   takeBaseName)
+import           Control.Monad   (liftM2)
+import           Data.List       (lookup)
+import           Data.Map        (Map, fromList, union)
+import qualified Data.Map        as M (Map, fromList, lookup)
+import           Safe            (fromJustDef, headDef, readMay)
+import           System.FilePath (dropTrailingPathSeparator,
+                                  takeBaseName)
 
 -- xmonad core
-import           XMonad                           hiding (focus)
-import           XMonad.StackSet                  hiding (workspaces)
-import qualified XMonad.StackSet                  as S (workspaces)
+import           XMonad          hiding (focus)
+import           XMonad.StackSet hiding (workspaces)
+import qualified XMonad.StackSet as S (workspaces)
 
 -- xmonad contrib
 import           XMonad.Actions.Commands          (defaultCommands)
@@ -50,18 +47,18 @@ import           XMonad.Layout.WindowNavigation   (Navigate (Go))
 import           XMonad.Util.NamedWindows         (getName)
 
 -- local imports
-import           XMonad.Actions.Task
-import           XMonad.Config.TaskActionConfig   (taskActions)
-import           XMonad.Config.XmobarConfig       (barCreator,
-                                                   barDestroyer, pp)
-import           XMonad.Hooks.TaskCommands        (serverModeTaskEventHookCmd')
+import XMonad.Actions.Task
+import XMonad.Config.TaskActionConfig (taskActions)
+import XMonad.Config.XmobarConfig     (barCreator, barDestroyer, pp)
+import XMonad.Hooks.TaskCommands      (serverModeTaskEventHookCmd')
 -- import           XMonad.Util.DTrace               (dtrace)
 
-taskConfig :: XConfig
+taskConfig :: NumberOfScreens
+           -> XConfig
                 (XMonad.Layout.LayoutModifier.ModifiedLayout
                    XMonad.Hooks.ManageDocks.AvoidStruts
                    (Choose Tall (Choose (Mirror Tall) Full)))
-taskConfig =
+taskConfig numOfScreens =
   desktopConfig
     { handleEventHook       =
          serverModeEventHookF "XMONAD_PRINT" (io . putStrLn)
@@ -71,7 +68,7 @@ taskConfig =
                  barDestroyer
     -- 1 = startId
     -- 2 = number of screens
-    , workspaces  = startupTaskWorkspaces 1 2 startupTasks
+    , workspaces  = startupTaskWorkspaces 1 numOfScreens (startupTasks numOfScreens)
     -- can use a custom function instead of
     --   xmobarShowTaskWithNumberOfWindowsAndFocussedTitle
     , logHook     =
@@ -87,16 +84,18 @@ taskConfig =
 -- at the end of the list if you want hot-restarting
 -- to work.
 -- define some custom tasks for use with the TaskSpace module.
-startupTasks, tasks :: [Task]
+startupTasks, tasks :: NumberOfScreens -> [Task]
 startupTasks = tasks
-tasks =
+tasks numOfScreens =
   (  concat
-        . replicate 3
+        . replicate 6
         . map (\s -> Task "terminal" (S s) "/home/j/" 0)
-        $ [0..1])
+        $ [0..numOfScreens] )
     ++   concatMap f   [ "/home/j/etc/zsh"
                       , "/home/j/etc/X11"
                       , "/home/j/etc/emacs/emacs.d"
+                      , "/tmp"
+                      , "/tmp"
                       ]
     ++   map ff1   [ "/home/j/Desktop/"
                         , "/home/j/etc/emacs/emacs.d"
@@ -107,9 +106,9 @@ tasks =
     ++   map ff0 [ "/home/j/"
                 , "/home/j/etc/xmonad"
                 ]
-    ++   [  t  "None"            1  "/tmp"
-        ,  t  "xmonad-compile"  1  "/home/j/etc/xmonad"
-        ,  t  "mplayer"         1  "/tmp/"
+    ++   [  -- t  "None"            1  "/tmp"
+           t  "xmonad-compile"  1  "/home/j/etc/xmonad"
+        ,  t  "mpv"         1  "/tmp/"
         ]
   where
       t n s d = Task n (S s) d 0

@@ -39,37 +39,33 @@ module XMonad.Actions.Task
    , addWorkspaceForTask
    , spawnShell
    , spawnShellIn
+   , NumberOfScreens
    ) where
 
 -- system imports
-import           Control.Monad                    (replicateM_, when)
+import Control.Monad (replicateM_, when)
 
-import           Data.List                        (filter, isPrefixOf)
-import qualified Data.Map                         as M (Map, lookup)
-import           Data.Maybe                       (isJust, isNothing)
-import           Safe                             (atDef, fromJustDef,
-                                                   fromJustNote,
-                                                   readMay, readNote)
-import           System.IO                        (hClose, hPutStr,
-                                                   hPutStrLn, stderr)
+import           Data.List  (filter, isPrefixOf)
+import qualified Data.Map   as M (Map, lookup)
+import           Data.Maybe (isJust, isNothing)
+import           Safe       (atDef, fromJustDef, fromJustNote,
+                             readMay, readNote)
+import           System.IO  (hClose, hPutStr, hPutStrLn, stderr)
 
 -- xmonad core
-import           XMonad                           hiding (focus,
-                                                   workspaces)
-import           XMonad.StackSet
+import XMonad          hiding (focus, workspaces)
+import XMonad.StackSet
 
 -- xmonad contrib
-import           XMonad.Actions.DynamicWorkspaces (addHiddenWorkspace)
-import           XMonad.Actions.OnScreen          (Focus (FocusTag),
-                                                   onScreen)
-import           XMonad.Actions.SpawnOn           (spawnHere)
-import           XMonad.Hooks.DynamicLog          (PP (ppCurrent, ppHidden, ppHiddenNoWindows, ppUrgent, ppVisible))
-import           XMonad.Layout.IndependentScreens (marshall,
-                                                   unmarshallW)
-import           XMonad.Util.Run                  (spawnPipe)
+import XMonad.Actions.DynamicWorkspaces (addHiddenWorkspace)
+import XMonad.Actions.OnScreen          (Focus (FocusTag), onScreen)
+import XMonad.Actions.SpawnOn           (spawnHere)
+import XMonad.Hooks.DynamicLog          (PP (ppCurrent, ppHidden, ppHiddenNoWindows, ppUrgent, ppVisible))
+import XMonad.Layout.IndependentScreens (marshall, unmarshallW)
+import XMonad.Util.Run                  (spawnPipe)
 
 -- below not contributed to xmonad contrib yet
-import           XMonad.Util.DTrace               (dtrace)
+import XMonad.Util.DTrace (dtrace)
 
 type Dir = FilePath
 type Name = String

@@ -1,0 +1,37 @@
+Name:          xmonad-task
+Version:       0.0.2
+Author:        Joe9
+Homepage:      http://none.sourceforge.net/
+Category:      Data
+Synopsis:      Enable Task functionality to Xmonad
+Tested-With:   GHC>=7.8.3
+Build-Type:    Simple
+Cabal-Version: >= 1.6
+
+Library
+   Build-Depends: base
+                , xmonad
+                , xmonad-contrib
+                , containers
+                , groom
+                , process
+                , safe
+                , data-default
+                , time
+                , filepath
+   Exposed-modules: XMonad.Actions.Task
+                  , XMonad.Config.TaskActionConfig
+                  , XMonad.Config.TaskConfig
+                  , XMonad.Config.XmobarConfig
+--                   , XMonad.Hooks.TaskActions
+                  , XMonad.Hooks.TaskCommands
+
+
+
+
+
+
+
+
+
+

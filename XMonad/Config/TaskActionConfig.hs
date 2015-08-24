@@ -69,7 +69,7 @@ taskActions =
                  , taGridSelectShow = gridSelectShowWorkspace
                  }
         taf f = nullTaskAction
-                 { taStartup = \t -> f t >> l "Full"
+                 { taStartup = f -- \t -> f t >> l "Full"
                  , taXmobarShow = xmobarShowTerminalDirNumTitle
                  , taGridSelectShow = gridSelectShowWorkspace
                  }

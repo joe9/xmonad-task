@@ -33,7 +33,7 @@ Executable taskctl
   Main-is: taskctl.hs
   Build-Depends: base
                , xmonad
-               , xmonad-contrib
+               , xmonad-contrib >= 0.12
                , containers
                , groom
                , process

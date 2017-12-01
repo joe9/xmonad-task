@@ -7,3 +7,4 @@ cabal-dev
 .virthualenv
 XMonad/Util/taskctl
 .#*.hs
+.stack-work/*

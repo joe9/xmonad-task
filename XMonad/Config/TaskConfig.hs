@@ -88,7 +88,7 @@ startupTasks, tasks :: NumberOfScreens -> [Task]
 startupTasks = tasks
 tasks numOfScreens =
   (  concat
-        . replicate 6
+        . replicate 10
         . map (\s -> Task "terminal" (S s) "/home/j/" 0)
         $ [0..numOfScreens] )
     ++   concatMap f   [ "/home/j/etc/zsh"
